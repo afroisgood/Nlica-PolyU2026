@@ -1,0 +1,245 @@
+/* src/App.css */
+
+/* === 全局變數與基礎設定 === */
+:root {
+  --win95-desktop: #008080; /* 經典祖母綠桌面 */
+  --win95-window: #c0c0c0;  /* 視窗灰 */
+  --win95-title: #000080;   /* 標題列深藍 */
+  --win95-light: #ffffff;   /* 亮邊 */
+  --win95-dark: #000000;    /* 暗邊 */
+  --win95-mid: #808080;     /* 中灰陰影 */
+}
+
+body {
+  margin: 0;
+  font-family: 'DotGothic16', 'Courier New', monospace; /* 像素風格字體 */
+  background-color: var(--win95-desktop);
+  color: var(--win95-dark);
+}
+
+.win95-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+/* === 主視窗外框 (放大版) === */
+.win95-window {
+  background-color: var(--win95-window);
+  border-top: 2px solid var(--win95-light);
+  border-left: 2px solid var(--win95-light);
+  border-right: 2px solid var(--win95-dark);
+  border-bottom: 2px solid var(--win95-dark);
+  box-shadow: inset -1px -1px var(--win95-mid);
+  padding: 2px;
+  width: 95%; 
+  max-width: 1000px; /* 放大視窗寬度 */
+  min-height: 80vh;  /* 放大視窗高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 深藍色標題列 */
+.win95-title-bar {
+  background-color: var(--win95-title);
+  color: white;
+  padding: 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.win95-title-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+/* 右上角的系統按鈕 */
+.win95-btn {
+  background-color: var(--win95-window);
+  border-top: 2px solid var(--win95-light);
+  border-left: 2px solid var(--win95-light);
+  border-right: 2px solid var(--win95-dark);
+  border-bottom: 2px solid var(--win95-dark);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: black;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.win95-btn:active {
+  border-top: 2px solid var(--win95-dark);
+  border-left: 2px solid var(--win95-dark);
+  border-right: 2px solid var(--win95-light);
+  border-bottom: 2px solid var(--win95-light);
+}
+
+/* === 內容區塊 === */
+.win95-content {
+  padding: 20px;
+  flex-grow: 1; /* 讓內容自動撐滿剩下的高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 復古輸入框：內凹 3D 陰影 */
+.win95-input {
+  background-color: white;
+  border-top: 2px solid var(--win95-mid);
+  border-left: 2px solid var(--win95-mid);
+  border-right: 2px solid var(--win95-light);
+  border-bottom: 2px solid var(--win95-light);
+  padding: 8px;
+  font-family: 'DotGothic16', 'Courier New', monospace;
+  font-size: 1.2rem;
+  outline: none;
+  width: 80%;
+  max-width: 400px;
+  margin-top: 10px;
+}
+
+/* 復古按鈕：外凸 3D 陰影 */
+.win95-button {
+  background-color: var(--win95-window);
+  border-top: 2px solid var(--win95-light);
+  border-left: 2px solid var(--win95-light);
+  border-right: 2px solid var(--win95-dark);
+  border-bottom: 2px solid var(--win95-dark);
+  padding: 8px 16px;
+  font-family: 'DotGothic16', 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 15px;
+  box-shadow: inset -1px -1px var(--win95-mid);
+}
+
+.win95-button:active {
+  border-top: 2px solid var(--win95-dark);
+  border-left: 2px solid var(--win95-dark);
+  border-right: 2px solid var(--win95-light);
+  border-bottom: 2px solid var(--win95-light);
+  box-shadow: inset 1px 1px var(--win95-mid);
+  padding: 9px 15px 7px 17px;
+}
+
+/* === 系統桌面與資料夾 (動態放大版) === */
+.win95-desktop {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 25px;
+  padding: 20px;
+  background-color: var(--win95-desktop); 
+  border: 2px inset var(--win95-mid);
+  align-content: start;
+  overflow-y: auto;
+  flex-grow: 1; /* 讓桌面撐滿視窗下半部 */
+  min-height: 400px; 
+}
+
+/* 桌面圖示 */
+.win95-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  gap: 8px;
+}
+.win95-icon-img {
+  font-size: 3.5rem; 
+}
+.win95-icon-text {
+  color: white;
+  font-size: 1rem;
+  padding: 2px 6px;
+}
+.win95-icon:active .win95-icon-text {
+  background-color: var(--win95-title);
+  outline: 1px dotted white;
+}
+
+/* 資料夾內部的檔案列表 */
+.win95-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background-color: white;
+  padding: 15px;
+  border: 2px inset var(--win95-mid);
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 400px;
+}
+
+.win95-file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+.win95-file-item:hover {
+  background-color: var(--win95-title);
+  color: white;
+}
+
+/* 檔案內容閱讀區 */
+.win95-document {
+  background-color: white;
+  padding: 20px;
+  border: 2px inset var(--win95-mid);
+  overflow-y: auto;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  flex-grow: 1;
+  min-height: 400px;
+}
+
+/* src/App.css (替換掉原本最下方的圖示設定) */
+
+/* === 像素圖示通用樣式 === */
+.pixel-icon {
+  width: 48px;
+  height: 48px;
+  position: relative;
+  display: inline-block;
+  margin-bottom: 5px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* 關鍵魔法：確保圖片放大時保持像素顆粒感，不會變模糊 */
+  image-rendering: pixelated; 
+}
+
+/* 經典黃色資料夾 📁 */
+.icon-folder {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M1 2h6l2 2h6v10H1z"/><path fill="%23FFD700" d="M2 3h4.5l2 2H14v8H2z"/><path fill="%23FFF" d="M2 3h4v1H2z"/><path fill="%23DAA520" d="M2 6h12v6H2z"/></svg>');
+}
+
+/* 任務盾牌 🛡️ */
+.icon-shield {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M3 2h10v5c0 4-5 8-5 8s-5-4-5-8z"/><path fill="%23C0C0C0" d="M4 3h8v4c0 3-4 6-4 6s-4-3-4-6z"/><path fill="%23008080" d="M5 4h6v3c0 2-3 4-3 4s-3-2-3-4z"/></svg>');
+}
+
+/* 聯絡電話 ☎️ */
+.icon-phone {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M2 4h12v8H2z"/><path fill="%23C0C0C0" d="M3 5h10v6H3z"/><path fill="%23000" d="M4 6h3v1H4zm0 2h3v1H4zm0 2h3v1H4zm5-4h3v1H9zm0 2h3v1H9zm0 2h3v1H9z"/></svg>');
+}
+
+/* 機器人頭像 🤖 (用於左上角歡迎區) */
+.icon-robot-head {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M3 3h10v10H3z"/><path fill="%23C0C0C0" d="M4 4h8v8H4z"/><path fill="%23FFF" d="M5 6h2v2H5zm4 0h2v2H9z"/><path fill="%23000" d="M5.5 6.5h1v1h-1zm4 0h1v1h-1zM5 10h6v1H5z"/></svg>');
+  width: 60px; /* 頭像稍微放大 */
+  height: 60px;
+}

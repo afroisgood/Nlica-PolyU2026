@@ -1,0 +1,27 @@
+
+{
+  "POLYU-ECO-01": {
+    "group": "環境生態組",
+    "factionTitle": "🌿 空間與自然的守護者",
+    "mentor": "王大明 老師",
+    "mainQuest": "協助豐田社區落實低衝擊生活，並參與有機田區與溪流生態的維護。"
+  },
+  "POLYU-ELD-02": {
+    "group": "高齡長照組",
+    "factionTitle": "💖 歲月故事的傾聽者",
+    "mentor": "林雅婷 老師",
+    "mainQuest": "陪伴社區長輩，將數位科技與社會設計導入樂齡生活。"
+  },
+  "POLYU-ECO-03": {
+    "group": "在地經濟組",
+    "factionTitle": "💰 地方創生的煉金術士",
+    "mentor": "陳建宏 老師",
+    "mainQuest": "發掘豐田的地方特色，協助建立社區商業品牌的永續模式。"
+  },
+  "POLYU-ART-04": {
+    "group": "傳統工藝組",
+    "factionTitle": "🔨 文化記憶的傳承匠人",
+    "mentor": "黃思慧 老師",
+    "mainQuest": "與在地職人學習，透過設計將傳統技藝轉化為現代生活用品。"
+  }
+}

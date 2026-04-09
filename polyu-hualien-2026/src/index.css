@@ -1,0 +1,19 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+
+:root {
+  /* Win95 經典色票 */
+  --win95-desktop: #008080; /* 經典祖母綠桌面 */
+  --win95-window: #c0c0c0;  /* 視窗灰 */
+  --win95-title: #000080;   /* 標題列深藍 */
+  --win95-light: #ffffff;   /* 亮邊 */
+  --win95-dark: #000000;    /* 暗邊 */
+  --win95-mid: #808080;     /* 中灰陰影 */
+}
+
+body {
+  margin: 0;
+  font-family: 'DotGothic16', 'Courier New', monospace; /* 像素風格字體 */
+  background-color: var(--win95-desktop);
+  color: var(--win95-dark);
+}
