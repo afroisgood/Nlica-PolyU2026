@@ -1,9 +1,8 @@
 // src/App.jsx
-import { useState } from 'react';
-import usersDatabase from './data/users.json';
-import { welcomeMessages, systemFolders } from './data/systemData';
+import { useState, useEffect } from 'react';
+import { fetchUsers } from './data/fetchUsers';
+import { welcomeMessages, systemFolders, groupThemeColors } from './data/systemData';
 import LoginScreen from './components/LoginScreen';
-import NicknameScreen from './components/NicknameScreen';
 import Desktop from './components/Desktop';
 import FolderView from './components/FolderView';
 import DocumentView from './components/DocumentView';
@@ -13,9 +12,10 @@ import './App.css';
 
 function App() {
   const [isBooting, setIsBooting] = useState(true);
+  const [usersDatabase, setUsersDatabase] = useState(null);
+  const [fetchError, setFetchError] = useState('');
   const [step, setStep] = useState(0);
   const [accessCode, setAccessCode] = useState('');
-  const [nickname, setNickname] = useState('');
   const [playerData, setPlayerData] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [greeting, setGreeting] = useState('');
@@ -41,7 +41,7 @@ function App() {
     : null;
 
   const statusPath = (() => {
-    if (step < 2) return 'C:\\';
+    if (step < 1) return 'C:\\';
     if (!currentFolder) return 'C:\\';
     if (!currentDoc) return `C:\\${currentFolder.title}\\`;
     return `C:\\${currentFolder.title}\\${currentDoc.title}`;
@@ -54,6 +54,8 @@ function App() {
     }
     const data = usersDatabase[accessCode];
     if (data) {
+      const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+      setGreeting(randomMsg);
       setPlayerData(data);
       setErrorMsg('');
       setStep(1);
@@ -62,18 +64,46 @@ function App() {
     }
   };
 
-  const handleEnterGame = () => {
-    if (nickname.trim() !== '') {
-      const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-      setGreeting(randomMsg);
-      setStep(2);
-    } else {
-      setErrorMsg('錯誤：勇者不能沒有名字！');
-    }
-  };
+  // 開機動畫結束後，從 Google Sheets 載入名單
+  useEffect(() => {
+    if (isBooting) return;
+    fetchUsers()
+      .then(setUsersDatabase)
+      .catch((err) => setFetchError(err.message));
+  }, [isBooting]);
 
   if (isBooting) {
     return <BootScreen onComplete={() => setIsBooting(false)} />;
+  }
+
+  if (!usersDatabase && !fetchError) {
+    return (
+      <main className="win95-container">
+        <div className="win95-window">
+          <div className="win95-title-bar">
+            <span>PolyU_Hualien_Tour.exe</span>
+          </div>
+          <div className="win95-content">
+            <p>&gt; 正在載入名單資料...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <main className="win95-container">
+        <div className="win95-window">
+          <div className="win95-title-bar">
+            <span>PolyU_Hualien_Tour.exe</span>
+          </div>
+          <div className="win95-content">
+            <p style={{ color: 'red' }}>&gt; 錯誤：{fetchError}</p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -83,7 +113,7 @@ function App() {
         {/* 標題列 */}
         <div
           className="win95-title-bar"
-          style={playerData ? { backgroundColor: playerData.themeColor } : {}}
+          style={playerData ? { backgroundColor: groupThemeColors[playerData.group] ?? '#000080' } : {}}
         >
           <span>PolyU_Hualien_Tour.exe{playerData ? ` — ${playerData.factionTitle}` : ''}</span>
           <div className="win95-title-buttons">
@@ -105,25 +135,18 @@ function App() {
           )}
 
           {step === 1 && (
-            <NicknameScreen
-              playerData={playerData}
-              nickname={nickname}
-              onNicknameChange={setNickname}
-              onEnter={handleEnterGame}
-              errorMsg={errorMsg}
-            />
-          )}
-
-          {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
               {/* 玩家資訊列 */}
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', backgroundColor: 'var(--win95-window)', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '15px' }}>
-                <div style={{ width: '80px', height: '80px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <div className="pixel-icon icon-robot-head" style={{ top: '6px' }}></div>
+                <div style={{ width: '80px', height: '80px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {playerData.avatarUrl
+                    ? <img src={playerData.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
+                    : <div className="pixel-icon icon-robot-head" style={{ top: '6px' }}></div>
+                  }
                 </div>
                 <div>
-                  <h2 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1.6rem' }}>嗨，{nickname}！</h2>
+                  <h2 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1.6rem' }}>嗨，{playerData.name || accessCode}！</h2>
                   <p style={{ margin: 0, color: 'var(--win95-title)', fontWeight: 'bold', fontSize: '1.1rem' }}>&gt; {greeting}</p>
                 </div>
               </div>
@@ -153,7 +176,7 @@ function App() {
 
         </div>
 
-        <StatusBar path={statusPath} nickname={nickname} playerData={playerData} />
+        <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} />
       </div>
     </main>
   );

@@ -12,8 +12,8 @@
 
 body {
   margin: 0;
-  font-family: 'DotGothic16', 'Courier New', monospace; /* 像素風格字體 */
-  background-color: var(--win95-desktop);
+  font-family: 'DotGothic16', 'Courier New', monospace;
+  background-color: #000;
   color: var(--win95-dark);
 }
 
@@ -23,6 +23,20 @@ body {
   align-items: center;
   min-height: 100vh;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 復古背景圖層（不影響視窗本體） */
+.win95-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url('https://lh3.googleusercontent.com/d/1UqYsvK59kzSxu3V4AgLIthRJuVbI9RcB');
+  background-size: cover;
+  background-position: center;
+  filter: sepia(0.45) contrast(1.1) brightness(0.8) saturate(0.7);
+  z-index: -1;
 }
 
 /* === 主視窗外框 (放大版) === */
