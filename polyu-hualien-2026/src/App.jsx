@@ -7,9 +7,12 @@ import NicknameScreen from './components/NicknameScreen';
 import Desktop from './components/Desktop';
 import FolderView from './components/FolderView';
 import DocumentView from './components/DocumentView';
+import BootScreen from './components/BootScreen';
+import StatusBar from './components/StatusBar';
 import './App.css';
 
 function App() {
+  const [isBooting, setIsBooting] = useState(true);
   const [step, setStep] = useState(0);
   const [accessCode, setAccessCode] = useState('');
   const [nickname, setNickname] = useState('');
@@ -26,7 +29,7 @@ function App() {
       if (doc.id === 'doc11' && playerData) {
         return {
           ...doc,
-          content: `[ 陣營身分 ] ${playerData.group}\n[ 帶領導師 ] ${playerData.mentor}\n\n[ 主線任務指派 ]\n${playerData.mainQuest}`,
+          content: `[ 陣營身分 ] ${playerData.group}\n[ 服務地點 ] ${playerData.location}\n[ 帶領導師 ] ${playerData.mentor}\n[ 組別人數 ] ${playerData.groupSize}\n\n[ 主線任務指派 ]\n${playerData.mainQuest}\n\n[ 行前裝備提示 ]\n${playerData.gear}`,
         };
       }
       return doc;
@@ -36,6 +39,13 @@ function App() {
   const currentFolder = currentFolderKey
     ? folders.find((f) => f.key === currentFolderKey)
     : null;
+
+  const statusPath = (() => {
+    if (step < 2) return 'C:\\';
+    if (!currentFolder) return 'C:\\';
+    if (!currentDoc) return `C:\\${currentFolder.title}\\`;
+    return `C:\\${currentFolder.title}\\${currentDoc.title}`;
+  })();
 
   const handleVerifyCode = () => {
     if (!accessCode) {
@@ -62,13 +72,20 @@ function App() {
     }
   };
 
+  if (isBooting) {
+    return <BootScreen onComplete={() => setIsBooting(false)} />;
+  }
+
   return (
     <main className="win95-container">
       <div className="win95-window">
 
         {/* 標題列 */}
-        <div className="win95-title-bar">
-          <span>PolyU_Hualien_Tour.exe</span>
+        <div
+          className="win95-title-bar"
+          style={playerData ? { backgroundColor: playerData.themeColor } : {}}
+        >
+          <span>PolyU_Hualien_Tour.exe{playerData ? ` — ${playerData.factionTitle}` : ''}</span>
           <div className="win95-title-buttons">
             <div className="win95-btn">_</div>
             <div className="win95-btn">□</div>
@@ -135,6 +152,8 @@ function App() {
           )}
 
         </div>
+
+        <StatusBar path={statusPath} nickname={nickname} playerData={playerData} />
       </div>
     </main>
   );

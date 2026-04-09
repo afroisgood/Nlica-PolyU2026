@@ -15,7 +15,7 @@ function LoginScreen({ accessCode, onAccessCodeChange, onVerify, errorMsg }) {
         value={accessCode}
         onChange={(e) => onAccessCodeChange(e.target.value.toUpperCase())}
         onKeyDown={handleKeyDown}
-        placeholder="例如: POLYU-ECO-01"
+        placeholder="例如: POLYU-ART-01"
       />
       <br />
       <button className="win95-button" onClick={onVerify}>驗證憑證</button>

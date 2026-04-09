@@ -34,9 +34,10 @@ body {
   border-bottom: 2px solid var(--win95-dark);
   box-shadow: inset -1px -1px var(--win95-mid);
   padding: 2px;
-  width: 95%; 
-  max-width: 1000px; /* 放大視窗寬度 */
-  min-height: 80vh;  /* 放大視窗高度 */
+  width: 95%;
+  max-width: 1000px;
+  height: 88vh;
+  max-height: 800px;
   display: flex;
   flex-direction: column;
 }
@@ -235,6 +236,105 @@ body {
 /* 聯絡電話 ☎️ */
 .icon-phone {
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M2 4h12v8H2z"/><path fill="%23C0C0C0" d="M3 5h10v6H3z"/><path fill="%23000" d="M4 6h3v1H4zm0 2h3v1H4zm0 2h3v1H4zm5-4h3v1H9zm0 2h3v1H9zm0 2h3v1H9z"/></svg>');
+}
+
+/* === Win95 狀態列 === */
+.win95-statusbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 2px solid var(--win95-mid);
+  padding: 3px 6px;
+  background-color: var(--win95-window);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.statusbar-path {
+  border-top: 1px solid var(--win95-mid);
+  border-left: 1px solid var(--win95-mid);
+  border-right: 1px solid var(--win95-light);
+  border-bottom: 1px solid var(--win95-light);
+  padding: 1px 8px;
+  min-width: 120px;
+  color: var(--win95-dark);
+}
+
+.statusbar-right {
+  display: flex;
+  gap: 4px;
+}
+
+.statusbar-cell {
+  border-top: 1px solid var(--win95-mid);
+  border-left: 1px solid var(--win95-mid);
+  border-right: 1px solid var(--win95-light);
+  border-bottom: 1px solid var(--win95-light);
+  padding: 1px 8px;
+  color: var(--win95-dark);
+  white-space: nowrap;
+}
+
+.statusbar-time {
+  min-width: 42px;
+  text-align: center;
+}
+
+/* === 開機動畫 === */
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  background-color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.boot-content {
+  width: 480px;
+  font-family: 'Courier New', monospace;
+  color: #c0c0c0;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.boot-line {
+  margin: 0;
+  white-space: pre;
+}
+
+.boot-line:first-child {
+  color: #ffffff;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.boot-progress-wrap {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.boot-progress-track {
+  flex: 1;
+  height: 18px;
+  background-color: #1a1a1a;
+  border: 1px solid #555;
+}
+
+.boot-progress-bar {
+  height: 100%;
+  background-color: #000080;
+  transition: width 35ms linear;
+}
+
+.boot-percent {
+  color: #c0c0c0;
+  font-size: 0.9rem;
+  width: 36px;
+  text-align: right;
 }
 
 /* 機器人頭像 🤖 (用於左上角歡迎區) */
