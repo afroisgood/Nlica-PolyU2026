@@ -1,10 +1,14 @@
 // src/data/fetchUsers.js
-// 從 Google Sheets 公開 CSV 讀取組員資料，轉換成與 users.json 相同的結構
+// Sheet 1：成員名單（accessCode, name, group, avatarUrl）
+// Sheet 2：組別資訊（group, factionTitle, mentor, location, mainQuest, gear, groupSize）
+// 程式依 group 名稱自動合併兩張表
 
-const SHEET_CSV_URL =
+const MEMBERS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vQXfw6pbDCrfneeWprwR2TdLYll7OXvDhE96zy1k-v1JWb7JNePJYsbS4nAa5WP0wVOZFEZFsJN60nR/pub?output=csv';
 
-// 簡易 CSV 解析（支援引號內含逗號的欄位）
+const GROUPS_CSV_URL =
+  'https://docs.google.com/spreadsheets/d/e/2PACX-1vQXfw6pbDCrfneeWprwR2TdLYll7OXvDhE96zy1k-v1JWb7JNePJYsbS4nAa5WP0wVOZFEZFsJN60nR/pub?gid=912908446&single=true&output=csv';
+
 function parseCSV(text) {
   const lines = text.trim().split('\n');
   const headers = lines[0].split(',').map((h) => h.trim());
@@ -33,27 +37,43 @@ function parseCSV(text) {
   return rows;
 }
 
-// 回傳 { [accessCode]: { group, factionTitle, ... } } 格式
 export async function fetchUsers() {
-  const res = await fetch(SHEET_CSV_URL);
-  if (!res.ok) throw new Error('無法讀取名單，請稍後再試。');
-  const text = await res.text();
-  const rows = parseCSV(text);
+  const [membersRes, groupsRes] = await Promise.all([
+    fetch(MEMBERS_CSV_URL),
+    fetch(GROUPS_CSV_URL),
+  ]);
+  if (!membersRes.ok || !groupsRes.ok) throw new Error('無法讀取名單，請稍後再試。');
+
+  const [membersText, groupsText] = await Promise.all([
+    membersRes.text(),
+    groupsRes.text(),
+  ]);
+
+  const members = parseCSV(membersText);
+  const groups = parseCSV(groupsText);
+
+  // 以 group 名稱建立組別查詢表
+  const groupMap = {};
+  for (const g of groups) {
+    if (g.group) groupMap[g.group] = g;
+  }
+
+  // 合併成員與組別資料
   const db = {};
-  for (const row of rows) {
-    if (row.accessCode) {
-      db[row.accessCode] = {
-        name: row.name || '',
-        group: row.group,
-        factionTitle: row.factionTitle,
-        mentor: row.mentor,
-        location: row.location,
-        mainQuest: row.mainQuest,
-        gear: row.gear,
-        groupSize: row.groupSize,
-        avatarUrl: row.avatarUrl || '',
-      };
-    }
+  for (const member of members) {
+    if (!member.accessCode) continue;
+    const groupInfo = groupMap[member.group] || {};
+    db[member.accessCode] = {
+      name: member.name || '',
+      group: member.group || '',
+      avatarUrl: member.avatarUrl || '',
+      factionTitle: groupInfo.factionTitle || '',
+      mentor: groupInfo.mentor || '',
+      location: groupInfo.location || '',
+      mainQuest: groupInfo.mainQuest || '',
+      gear: groupInfo.gear || '',
+      groupSize: groupInfo.groupSize || '',
+    };
   }
   return db;
 }
