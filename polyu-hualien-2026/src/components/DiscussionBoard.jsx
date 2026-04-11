@@ -71,7 +71,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   const selectedLabel = DISCUSSION_DAYS.find((d) => d.key === selectedDay)?.label || selectedDay;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0, overflow: 'hidden' }}>
 
       {/* 頂部 toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>

@@ -163,7 +163,7 @@ function App() {
           )}
 
           {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '15px' }}>
                 <div style={{ width: '80px', height: '80px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
                   {playerData?.avatarUrl
