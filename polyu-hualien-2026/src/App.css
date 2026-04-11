@@ -596,7 +596,7 @@ body {
   margin-bottom: 6px;
 }
 
-/* YouTube iframe 16:9 響應式容器 */
+/* YouTube iframe 16:9 響應式容器（限制最大高度） */
 .md-youtube-block {
   background-color: #1a1a1a;
   border-color: #000;
@@ -605,16 +605,17 @@ body {
   color: #ff4444;
 }
 .md-youtube-wrapper {
-  position: relative;
   width: 100%;
-  padding-top: 56.25%; /* 16:9 */
+  aspect-ratio: 16 / 9;
+  max-height: 280px;   /* 約等於寬度 498px，不會佔滿整個視窗 */
   background: #000;
+  overflow: hidden;
 }
 .md-youtube-wrapper iframe {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
+  border: none;
+  display: block;
 }
 
 /* ═══════════════════════════════════════════════════════
