@@ -163,13 +163,15 @@ function App() {
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '15px' }}>
                 <div style={{ width: '80px', height: '80px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                  {playerData.avatarUrl
+                  {playerData?.avatarUrl
                     ? <img src={playerData.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
                     : <div className="pixel-icon icon-robot-head" style={{ top: '6px' }}></div>
                   }
                 </div>
                 <div>
-                  <h2 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1.6rem' }}>嗨，{playerData.name || accessCode}！</h2>
+                  <h2 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1.6rem' }}>
+                    {isGuest ? '嗨，訪客！' : `嗨，${playerData?.name || accessCode}！`}
+                  </h2>
                   <p style={{ margin: 0, color: 'var(--win95-title)', fontWeight: 'bold', fontSize: '1.1rem' }}>&gt; {greeting}</p>
                 </div>
               </div>
