@@ -83,23 +83,46 @@ function ToolbarBtn({ label, title, onMouseDown }) {
   );
 }
 
+// ── YouTube ID 提取（與 markdown.jsx 共用邏輯） ───────────────────
+const YT_PATTERNS = [
+  /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  /music\.youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})/,
+];
+function extractYouTubeId(url) {
+  for (const re of YT_PATTERNS) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 // ── 插入面板（Toolbar Panel）────────────────────────────────────
 function InsertPanel({ type, pat, onInsert, onClose }) {
+  const isImage = type === 'image';
+  const isAudio = type === 'audio';
+  const isVideo = type === 'video';
+  const isLink  = type === 'link';
+  const isMedia = isAudio || isVideo; // 支援 YouTube 的類型
+
+  // 來源模式：'url'（直接貼網址）| 'youtube'（YouTube 連結）| 'upload'（上傳檔案）
+  const [sourceMode, setSourceMode] = useState(isMedia ? 'youtube' : 'url');
+
   const [url, setUrl] = useState('');
+  const [ytUrl, setYtUrl] = useState('');
   const [altText, setAltText] = useState('');
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState('');
   const fileRef = useRef(null);
 
-  const isImage = type === 'image';
-  const isAudio = type === 'audio';
-  const isVideo = type === 'video';
-  const isLink  = type === 'link';
-
-  const accept = isImage ? 'image/*' : isAudio ? 'audio/*' : isVideo ? 'video/*' : '';
-  const icon = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '🔗';
+  const icon  = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '🔗';
   const label = isImage ? '圖片' : isAudio ? '音樂' : isVideo ? '影片' : '連結';
+  const accept = isImage ? 'image/*' : isAudio ? 'audio/*' : isVideo ? 'video/*' : '';
+
+  // 目前實際使用的 URL（依模式決定）
+  const activeUrl = sourceMode === 'youtube' ? ytUrl : url;
+  const ytId = sourceMode === 'youtube' ? extractYouTubeId(ytUrl) : null;
+  const ytValid = sourceMode === 'youtube' && !!ytId;
 
   const handleUpload = async () => {
     if (!file) return;
@@ -109,7 +132,7 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
       const base64 = await fileToBase64(file);
       const rawUrl = await uploadMediaToGitHub(pat, file.name, base64);
       setUrl(rawUrl);
-      setUploadMsg(`✅ 上傳成功`);
+      setUploadMsg('✅ 上傳成功');
     } catch (e) {
       setUploadMsg(`❌ ${e.message}`);
     }
@@ -117,104 +140,161 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
   };
 
   const handleConfirm = () => {
-    if (!url.trim()) return;
-    if (isLink) {
-      onInsert(`[${altText || '連結文字'}](${url.trim()})`);
-    } else if (isImage) {
-      onInsert(`![${altText || '圖片'}](${url.trim()})`);
-    } else if (isAudio) {
-      onInsert(`[audio:${altText || '音樂'}](${url.trim()})`);
-    } else if (isVideo) {
-      onInsert(`[video:${altText || '影片'}](${url.trim()})`);
-    }
+    const finalUrl = activeUrl.trim();
+    if (!finalUrl) return;
+    if (isLink)       onInsert(`[${altText || '連結文字'}](${finalUrl})`);
+    else if (isImage) onInsert(`![${altText || '圖片'}](${finalUrl})`);
+    else if (isAudio) onInsert(`[audio:${altText || '音樂'}](${finalUrl})`);
+    else if (isVideo) onInsert(`[video:${altText || '影片'}](${finalUrl})`);
     onClose();
   };
 
-  const panelStyle = {
-    border: '2px solid #000080',
-    backgroundColor: '#c0c0c0',
-    padding: 10,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    fontSize: '0.85rem',
-    position: 'relative',
-  };
+  const canConfirm = sourceMode === 'youtube' ? ytValid : !!activeUrl.trim();
+
+  // 預覽語法
+  const previewSyntax = (() => {
+    const u = activeUrl.trim();
+    if (!u) return '';
+    if (isLink)       return `[${altText || '連結文字'}](${u})`;
+    if (isImage)      return `![${altText || '圖片'}](${u})`;
+    if (isAudio)      return `[audio:${altText || '音樂'}](${u})`;
+    if (isVideo)      return `[video:${altText || '影片'}](${u})`;
+    return '';
+  })();
+
+  const tabStyle = (mode) => ({
+    padding: '3px 10px', fontSize: '0.8rem', cursor: 'pointer',
+    backgroundColor: sourceMode === mode ? '#000080' : '#c0c0c0',
+    color: sourceMode === mode ? '#fff' : '#000',
+    border: '1px solid #808080', borderBottom: 'none',
+  });
 
   return (
-    <div style={panelStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', marginBottom: 2 }}>
+    <div style={{ border: '2px solid #000080', backgroundColor: '#c0c0c0', fontSize: '0.85rem', position: 'relative' }}>
+      {/* 標題列 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px 4px', fontWeight: 'bold', borderBottom: '1px solid #808080' }}>
         <span>{icon} 插入{label}</span>
         <button className="win95-button" style={{ padding: '1px 6px', fontSize: '0.75rem' }} onClick={onClose}>✕</button>
       </div>
 
-      {/* 說明文字 / Alt text */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <label style={{ minWidth: 60 }}>{isLink ? '顯示文字' : '說明文字'}：</label>
-        <input
-          className="win95-input"
-          style={{ flex: 1 }}
-          placeholder={isLink ? '點此前往...' : isImage ? '圖片說明' : isAudio ? '音樂標題' : '影片標題'}
-          value={altText}
-          onChange={(e) => setAltText(e.target.value)}
-        />
-      </div>
+      {/* 來源切換 Tab（媒體才顯示） */}
+      {isMedia && (
+        <div style={{ display: 'flex', paddingLeft: 10, paddingTop: 6, gap: 2 }}>
+          <button style={tabStyle('youtube')} onClick={() => setSourceMode('youtube')}>▶ YouTube</button>
+          <button style={tabStyle('url')}     onClick={() => setSourceMode('url')}>🔗 直接網址</button>
+          <button style={tabStyle('upload')}  onClick={() => setSourceMode('upload')}>⬆️ 上傳檔案</button>
+        </div>
+      )}
 
-      {/* URL 輸入 */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <label style={{ minWidth: 60 }}>網址：</label>
-        <input
-          className="win95-input"
-          style={{ flex: 1 }}
-          placeholder={isLink ? 'https://maps.app.goo.gl/...' : `https://... (.${isImage ? 'jpg/png' : isAudio ? 'mp3' : 'mp4'})`}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
-      </div>
-
-      {/* 檔案上傳（非連結模式） */}
-      {!isLink && (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <label style={{ minWidth: 60 }}>或上傳：</label>
+      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {/* 說明文字 */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <label style={{ minWidth: 64 }}>{isLink ? '顯示文字' : '說明文字'}：</label>
           <input
-            ref={fileRef}
-            type="file"
-            accept={accept}
-            style={{ display: 'none' }}
-            onChange={(e) => { setFile(e.target.files[0] || null); setUploadMsg(''); setUrl(''); }}
+            className="win95-input" style={{ flex: 1 }}
+            placeholder={isLink ? '點此前往...' : isImage ? '圖片說明' : isAudio ? '音樂標題' : '影片標題'}
+            value={altText}
+            onChange={(e) => setAltText(e.target.value)}
           />
-          <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
-            onClick={() => fileRef.current?.click()}>
-            📂 選擇檔案
-          </button>
-          {file && <span style={{ fontSize: '0.8rem', color: '#333' }}>{file.name}</span>}
-          {file && !url && (
+        </div>
+
+        {/* YouTube 模式 */}
+        {sourceMode === 'youtube' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <label style={{ minWidth: 64 }}>YouTube：</label>
+              <input
+                className="win95-input" style={{ flex: 1 }}
+                placeholder="https://www.youtube.com/watch?v=... 或 https://youtu.be/..."
+                value={ytUrl}
+                onChange={(e) => setYtUrl(e.target.value)}
+              />
+            </div>
+            {ytUrl && (
+              ytId
+                ? <span style={{ fontSize: '0.78rem', color: 'green', paddingLeft: 70 }}>✅ 已辨識 YouTube ID：{ytId}</span>
+                : <span style={{ fontSize: '0.78rem', color: 'red', paddingLeft: 70 }}>⚠️ 無法辨識 YouTube 連結，請確認格式</span>
+            )}
+          </div>
+        )}
+
+        {/* 直接網址模式 */}
+        {sourceMode === 'url' && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <label style={{ minWidth: 64 }}>網址：</label>
+            <input
+              className="win95-input" style={{ flex: 1 }}
+              placeholder={isLink ? 'https://maps.app.goo.gl/...' : `https://... (.${isImage ? 'jpg/png' : isAudio ? 'mp3' : 'mp4'})`}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* 上傳模式 */}
+        {sourceMode === 'upload' && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ minWidth: 64 }}>選擇檔案：</label>
+            <input ref={fileRef} type="file" accept={accept} style={{ display: 'none' }}
+              onChange={(e) => { setFile(e.target.files[0] || null); setUploadMsg(''); setUrl(''); }} />
             <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
-              onClick={handleUpload} disabled={isUploading}>
-              {isUploading ? '上傳中...' : '⬆️ 上傳到 GitHub'}
-            </button>
-          )}
-          {uploadMsg && <span style={{ fontSize: '0.8rem', color: uploadMsg.startsWith('✅') ? 'green' : 'red' }}>{uploadMsg}</span>}
-        </div>
-      )}
+              onClick={() => fileRef.current?.click()}>📂 瀏覽</button>
+            {file && <span style={{ fontSize: '0.8rem', color: '#333' }}>{file.name}</span>}
+            {file && !url && (
+              <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
+                onClick={handleUpload} disabled={isUploading}>
+                {isUploading ? '上傳中...' : '⬆️ 上傳到 GitHub'}
+              </button>
+            )}
+            {uploadMsg && <span style={{ fontSize: '0.8rem', color: uploadMsg.startsWith('✅') ? 'green' : 'red' }}>{uploadMsg}</span>}
+          </div>
+        )}
 
-      {/* 確認插入 */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-        <button className="win95-button" onClick={handleConfirm} disabled={!url.trim()}>
-          ✅ 插入文件
-        </button>
-        <button className="win95-button" onClick={onClose}>取消</button>
+        {/* 連結模式（isLink）只有直接網址 */}
+        {isLink && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <label style={{ minWidth: 64 }}>網址：</label>
+            <input
+              className="win95-input" style={{ flex: 1 }}
+              placeholder="https://maps.app.goo.gl/..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* 圖片只有直接網址 + 上傳 */}
+        {isImage && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ minWidth: 64 }}>或上傳：</label>
+            <input ref={fileRef} type="file" accept={accept} style={{ display: 'none' }}
+              onChange={(e) => { setFile(e.target.files[0] || null); setUploadMsg(''); setUrl(''); }} />
+            <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
+              onClick={() => fileRef.current?.click()}>📂 瀏覽</button>
+            {file && <span style={{ fontSize: '0.8rem', color: '#333' }}>{file.name}</span>}
+            {file && !url && (
+              <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
+                onClick={handleUpload} disabled={isUploading}>
+                {isUploading ? '上傳中...' : '⬆️ 上傳到 GitHub'}
+              </button>
+            )}
+            {uploadMsg && <span style={{ fontSize: '0.8rem', color: uploadMsg.startsWith('✅') ? 'green' : 'red' }}>{uploadMsg}</span>}
+          </div>
+        )}
+
+        {/* 確認按鈕 */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+          <button className="win95-button" onClick={handleConfirm} disabled={!canConfirm}>✅ 插入文件</button>
+          <button className="win95-button" onClick={onClose}>取消</button>
+        </div>
+
+        {/* 預覽語法 */}
+        {previewSyntax && (
+          <div style={{ padding: '4px 8px', backgroundColor: '#fff', border: '1px inset #808080', fontSize: '0.78rem', fontFamily: 'monospace', color: '#555', wordBreak: 'break-all' }}>
+            {previewSyntax}
+          </div>
+        )}
       </div>
-
-      {/* Markdown 預覽語法 */}
-      {url.trim() && (
-        <div style={{ marginTop: 4, padding: '4px 8px', backgroundColor: '#fff', border: '1px inset #808080', fontSize: '0.78rem', fontFamily: 'monospace', color: '#555', wordBreak: 'break-all' }}>
-          {isLink && `[${altText || '連結文字'}](${url})`}
-          {isImage && `![${altText || '圖片'}](${url})`}
-          {isAudio && `[audio:${altText || '音樂'}](${url})`}
-          {isVideo && `[video:${altText || '影片'}](${url})`}
-        </div>
-      )}
     </div>
   );
 }

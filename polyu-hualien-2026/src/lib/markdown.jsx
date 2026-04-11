@@ -1,12 +1,46 @@
 // src/lib/markdown.jsx
 // 輕量 Markdown 渲染器（React）
-// 支援：# 標題、**粗體**、[連結](url)、![圖片](url)、[audio:標題](url)、[video:標題](url)、--- 分隔線
+// 支援：# 標題、**粗體**、[連結](url)、![圖片](url)
+//       [audio:標題](url)、[video:標題](url)、--- 分隔線
+//       YouTube / YouTube Music URL 自動轉 iframe 嵌入
 
 import React from 'react';
 
+// ── YouTube URL 解析 ─────────────────────────────────────────────
+const YT_PATTERNS = [
+  /(?:youtube\.com\/watch\?(?:.*&)?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  /music\.youtube\.com\/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})/,
+];
+
+export function extractYouTubeId(url) {
+  for (const re of YT_PATTERNS) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+/** YouTube iframe 嵌入元件 */
+function YouTubeEmbed({ videoId, label, icon, keyStr }) {
+  return (
+    <div key={keyStr} className="md-media-block md-youtube-block">
+      <span className="md-media-label">{icon} {label}</span>
+      <div className="md-youtube-wrapper">
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}`}
+          title={label}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          style={{ border: 'none', width: '100%', height: '100%' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Inline 解析 ───────────────────────────────────────────────────
 const INLINE_RE = /!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]*)\]\(([^)]+)\)|\*\*([^*]+)\*\*/g;
 
-/** 解析單行內的 inline 元素，回傳 React children 陣列 */
 function parseInline(text, onImageClick, keyPrefix) {
   const parts = [];
   let lastIndex = 0;
@@ -15,21 +49,17 @@ function parseInline(text, onImageClick, keyPrefix) {
   INLINE_RE.lastIndex = 0;
 
   while ((match = INLINE_RE.exec(text)) !== null) {
-    // 前置純文字
     if (match.index > lastIndex) {
       parts.push(text.slice(lastIndex, match.index));
     }
 
     if (match[0].startsWith('!')) {
       // 圖片：![alt](url)
-      const alt = match[1];
-      const url = match[2];
+      const alt = match[1], url = match[2];
       parts.push(
         <img
           key={`${keyPrefix}-img-${key++}`}
-          src={url}
-          alt={alt}
-          title={alt}
+          src={url} alt={alt} title={alt}
           className="md-inline-img"
           onClick={() => onImageClick?.(url, alt)}
         />
@@ -38,32 +68,34 @@ function parseInline(text, onImageClick, keyPrefix) {
       // 連結 / 媒體：[text](url)
       const linkText = match[3];
       const url = match[4];
+      const lowerText = linkText.toLowerCase();
 
-      if (linkText.toLowerCase().startsWith('audio:')) {
+      if (lowerText.startsWith('audio:')) {
         const label = linkText.slice(6).trim() || '音訊';
+        const ytId = extractYouTubeId(url);
         parts.push(
-          <div key={`${keyPrefix}-audio-${key++}`} className="md-media-block">
-            <span className="md-media-label">🎵 {label}</span>
-            <audio controls src={url} style={{ display: 'block', width: '100%', marginTop: 4 }} />
-          </div>
+          ytId
+            ? <YouTubeEmbed key={`${keyPrefix}-ytaudio-${key++}`} videoId={ytId} label={label} icon="🎵" />
+            : <div key={`${keyPrefix}-audio-${key++}`} className="md-media-block">
+                <span className="md-media-label">🎵 {label}</span>
+                <audio controls src={url} style={{ display: 'block', width: '100%', marginTop: 4 }} />
+              </div>
         );
-      } else if (linkText.toLowerCase().startsWith('video:')) {
+      } else if (lowerText.startsWith('video:')) {
         const label = linkText.slice(6).trim() || '影片';
+        const ytId = extractYouTubeId(url);
         parts.push(
-          <div key={`${keyPrefix}-video-${key++}`} className="md-media-block">
-            <span className="md-media-label">🎬 {label}</span>
-            <video controls src={url} style={{ display: 'block', maxWidth: '100%', marginTop: 4 }} />
-          </div>
+          ytId
+            ? <YouTubeEmbed key={`${keyPrefix}-ytvideo-${key++}`} videoId={ytId} label={label} icon="🎬" />
+            : <div key={`${keyPrefix}-video-${key++}`} className="md-media-block">
+                <span className="md-media-label">🎬 {label}</span>
+                <video controls src={url} style={{ display: 'block', maxWidth: '100%', marginTop: 4 }} />
+              </div>
         );
       } else {
         parts.push(
-          <a
-            key={`${keyPrefix}-link-${key++}`}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="md-link"
-          >
+          <a key={`${keyPrefix}-link-${key++}`} href={url}
+            target="_blank" rel="noopener noreferrer" className="md-link">
             {linkText}
           </a>
         );
@@ -76,19 +108,11 @@ function parseInline(text, onImageClick, keyPrefix) {
     lastIndex = INLINE_RE.lastIndex;
   }
 
-  // 結尾純文字
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
   return parts.length > 0 ? parts : [text];
 }
 
-/**
- * 將 Markdown 字串渲染為 React 元素陣列
- * @param {string} content
- * @param {(src:string, alt:string) => void} onImageClick - 點擊圖片時的 callback
- */
+// ── Block 渲染 ───────────────────────────────────────────────────
 export function renderMarkdown(content, onImageClick) {
   if (!content) return null;
 
@@ -98,55 +122,30 @@ export function renderMarkdown(content, onImageClick) {
   lines.forEach((line, i) => {
     const key = `line-${i}`;
 
-    // 標題
-    if (line.startsWith('### ')) {
-      elements.push(<h5 key={key} className="md-h3">{line.slice(4)}</h5>);
-      return;
-    }
-    if (line.startsWith('## ')) {
-      elements.push(<h4 key={key} className="md-h2">{line.slice(3)}</h4>);
-      return;
-    }
-    if (line.startsWith('# ')) {
-      elements.push(<h3 key={key} className="md-h1">{line.slice(2)}</h3>);
-      return;
-    }
+    if (line.startsWith('### ')) { elements.push(<h5 key={key} className="md-h3">{line.slice(4)}</h5>); return; }
+    if (line.startsWith('## '))  { elements.push(<h4 key={key} className="md-h2">{line.slice(3)}</h4>); return; }
+    if (line.startsWith('# '))   { elements.push(<h3 key={key} className="md-h1">{line.slice(2)}</h3>); return; }
 
-    // 分隔線
-    if (line.trim() === '---') {
-      elements.push(<hr key={key} className="md-hr" />);
-      return;
-    }
+    if (line.trim() === '---') { elements.push(<hr key={key} className="md-hr" />); return; }
 
-    // 純圖片行：整行只有 ![alt](url)
+    // 純圖片行
     const soloImg = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (soloImg) {
       elements.push(
         <div key={key} className="md-img-block">
-          <img
-            src={soloImg[2]}
-            alt={soloImg[1]}
-            title={soloImg[1]}
-            className="md-block-img"
-            onClick={() => onImageClick?.(soloImg[2], soloImg[1])}
-          />
+          <img src={soloImg[2]} alt={soloImg[1]} title={soloImg[1]}
+            className="md-block-img" onClick={() => onImageClick?.(soloImg[2], soloImg[1])} />
           {soloImg[1] && <span className="md-img-caption">{soloImg[1]}</span>}
         </div>
       );
       return;
     }
 
-    // 空行
-    if (line.trim() === '') {
-      elements.push(<div key={key} className="md-blank" />);
-      return;
-    }
+    if (line.trim() === '') { elements.push(<div key={key} className="md-blank" />); return; }
 
-    // 一般段落行（含 inline 解析）
-    const inline = parseInline(line, onImageClick, key);
     elements.push(
       <div key={key} className="md-line">
-        {inline}
+        {parseInline(line, onImageClick, key)}
       </div>
     );
   });
