@@ -68,7 +68,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSend();
     }
@@ -158,7 +158,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
                 lineHeight: 1.5,
                 height: 60,
               }}
-              placeholder={`在「${selectedLabel}」留言（Enter 送出，Shift+Enter 換行）`}
+              placeholder={`在「${selectedLabel}」留言（Ctrl+Enter 送出）`}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
