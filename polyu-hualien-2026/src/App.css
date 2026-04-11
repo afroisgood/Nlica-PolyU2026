@@ -252,6 +252,11 @@ body {
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M2 4h12v8H2z"/><path fill="%23C0C0C0" d="M3 5h10v6H3z"/><path fill="%23000" d="M4 6h3v1H4zm0 2h3v1H4zm0 2h3v1H4zm5-4h3v1H9zm0 2h3v1H9zm0 2h3v1H9z"/></svg>');
 }
 
+/* 討論區 💬 */
+.icon-chat {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M1 1h10v8H8l-3 3V9H1z"/><path fill="%23ffffff" d="M2 2h8v6H7.5L6 9.5V8H2z"/><path fill="%23000" d="M3 4h6v1H3zm0 2h4v1H3z"/><path fill="%23C0C0C0" d="M7 6h5v5h-2l-1 2-1-2H7z"/><path fill="%23000080" d="M8 7h3v3H9.5L9 11l-.5-1H8z"/></svg>');
+}
+
 /* === Win95 狀態列 === */
 .win95-statusbar {
   display: flex;

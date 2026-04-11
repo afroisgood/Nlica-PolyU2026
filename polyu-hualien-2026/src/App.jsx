@@ -9,6 +9,7 @@ import DocumentView from './components/DocumentView';
 import BootScreen from './components/BootScreen';
 import StatusBar from './components/StatusBar';
 import AdminPage from './components/AdminPage';
+import DiscussionBoard from './components/DiscussionBoard';
 import './App.css';
 
 // 固定的各組任務資料夾（內容依登入者動態產生，不放 content.json）
@@ -35,6 +36,7 @@ function App() {
   const [greeting, setGreeting] = useState('');
   const [currentFolderKey, setCurrentFolderKey] = useState(null);
   const [currentDoc, setCurrentDoc] = useState(null);
+  const [showDiscussion, setShowDiscussion] = useState(false);
 
   // 若網址是 /admin，直接顯示後台
   const isAdmin = window.location.pathname === '/admin';
@@ -65,6 +67,7 @@ function App() {
 
   const statusPath = (() => {
     if (step < 1) return 'C:\\';
+    if (showDiscussion) return 'C:\\討論區\\';
     if (!currentFolder) return 'C:\\';
     if (!currentDoc) return `C:\\${currentFolder.title}\\`;
     return `C:\\${currentFolder.title}\\${currentDoc.title}`;
@@ -176,12 +179,17 @@ function App() {
                 </div>
               </div>
 
-              {currentFolder === null && <Desktop folders={visibleFolders} onOpenFolder={setCurrentFolderKey} />}
-              {currentFolder !== null && currentDoc === null && (
+              {!showDiscussion && currentFolder === null && (
+                <Desktop folders={visibleFolders} onOpenFolder={setCurrentFolderKey} onOpenDiscussion={() => setShowDiscussion(true)} />
+              )}
+              {!showDiscussion && currentFolder !== null && currentDoc === null && (
                 <FolderView folder={currentFolder} onOpenDoc={setCurrentDoc} onBack={() => setCurrentFolderKey(null)} />
               )}
-              {currentFolder !== null && currentDoc !== null && (
+              {!showDiscussion && currentFolder !== null && currentDoc !== null && (
                 <DocumentView doc={currentDoc} onBack={() => setCurrentDoc(null)} />
+              )}
+              {showDiscussion && (
+                <DiscussionBoard playerData={playerData} isGuest={isGuest} onBack={() => setShowDiscussion(false)} />
               )}
             </div>
           )}

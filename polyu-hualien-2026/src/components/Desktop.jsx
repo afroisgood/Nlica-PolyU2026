@@ -1,5 +1,5 @@
 // src/components/Desktop.jsx
-function Desktop({ folders, onOpenFolder }) {
+function Desktop({ folders, onOpenFolder, onOpenDiscussion }) {
   return (
     <div className="win95-desktop">
       {folders.map((folder) => (
@@ -8,6 +8,10 @@ function Desktop({ folders, onOpenFolder }) {
           <span className="win95-icon-text">{folder.title}</span>
         </div>
       ))}
+      <div className="win95-icon" onClick={onOpenDiscussion}>
+        <div className="pixel-icon icon-chat"></div>
+        <span className="win95-icon-text">討論區</span>
+      </div>
     </div>
   );
 }
