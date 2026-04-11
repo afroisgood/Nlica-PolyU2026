@@ -2,6 +2,15 @@
 // Win95 風格音效 — 使用 Web Audio API 合成，不需外部音檔
 
 let _ctx = null;
+let _soundEnabled = localStorage.getItem('soundEnabled') !== 'false'; // 預設開啟
+
+export function isSoundEnabled() { return _soundEnabled; }
+
+export function toggleSound() {
+  _soundEnabled = !_soundEnabled;
+  localStorage.setItem('soundEnabled', _soundEnabled);
+  return _soundEnabled;
+}
 
 function getCtx() {
   if (!_ctx) {
@@ -12,6 +21,7 @@ function getCtx() {
 }
 
 function tone(freq, startOffset, duration, type = 'square', vol = 0.07) {
+  if (!_soundEnabled) return;
   try {
     const ctx = getCtx();
     const t = ctx.currentTime + startOffset;
