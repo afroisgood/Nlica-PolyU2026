@@ -67,12 +67,6 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     setSending(false);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
 
   const selectedLabel = DISCUSSION_DAYS.find((d) => d.key === selectedDay)?.label || selectedDay;
 
@@ -158,10 +152,9 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
                 lineHeight: 1.5,
                 height: 60,
               }}
-              placeholder={`在「${selectedLabel}」留言（Ctrl+Enter 送出）`}
+              placeholder={`在「${selectedLabel}」留言，按右側送出按鈕發送`}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
             />
             <button
               className="win95-button"
