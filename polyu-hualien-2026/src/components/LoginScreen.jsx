@@ -1,5 +1,5 @@
 // src/components/LoginScreen.jsx
-function LoginScreen({ accessCode, onAccessCodeChange, onVerify, errorMsg }) {
+function LoginScreen({ accessCode, onAccessCodeChange, onVerify, onGuestEnter, errorMsg }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') onVerify();
   };
@@ -19,6 +19,9 @@ function LoginScreen({ accessCode, onAccessCodeChange, onVerify, errorMsg }) {
       />
       <br />
       <button className="win95-button" onClick={onVerify}>驗證憑證</button>
+      <button className="win95-button" style={{ marginLeft: '10px', color: '#555' }} onClick={onGuestEnter}>
+        忽略驗證直接進入
+      </button>
       {errorMsg && <p style={{ color: 'red', marginTop: '15px', fontWeight: 'bold' }}>{errorMsg}</p>}
     </div>
   );

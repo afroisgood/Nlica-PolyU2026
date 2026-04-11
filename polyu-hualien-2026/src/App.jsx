@@ -28,6 +28,7 @@ function App() {
   const [contentFolders, setContentFolders] = useState([]);
   const [fetchError, setFetchError] = useState('');
   const [step, setStep] = useState(0);
+  const [isGuest, setIsGuest] = useState(false);
   const [accessCode, setAccessCode] = useState('');
   const [playerData, setPlayerData] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -38,8 +39,8 @@ function App() {
   // 若網址是 /admin，直接顯示後台
   const isAdmin = window.location.pathname === '/admin';
 
-  // 組合所有資料夾（content.json + 動態任務資料夾）
-  const folders = [
+  // 訪客模式：不顯示「各組學習服務安排」
+  const visibleFolders = isGuest ? contentFolders : [
     ...contentFolders,
     {
       ...GROUP_TASK_FOLDER,
@@ -59,7 +60,7 @@ function App() {
   ];
 
   const currentFolder = currentFolderKey
-    ? folders.find((f) => f.key === currentFolderKey)
+    ? visibleFolders.find((f) => f.key === currentFolderKey)
     : null;
 
   const statusPath = (() => {
@@ -68,6 +69,13 @@ function App() {
     if (!currentDoc) return `C:\\${currentFolder.title}\\`;
     return `C:\\${currentFolder.title}\\${currentDoc.title}`;
   })();
+
+  const handleGuestEnter = () => {
+    const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+    setGreeting(randomMsg);
+    setIsGuest(true);
+    setStep(1);
+  };
 
   const handleVerifyCode = () => {
     if (!accessCode) { setErrorMsg('錯誤：請輸入憑證代碼。'); return; }
@@ -146,6 +154,7 @@ function App() {
               accessCode={accessCode}
               onAccessCodeChange={setAccessCode}
               onVerify={handleVerifyCode}
+              onGuestEnter={handleGuestEnter}
               errorMsg={errorMsg}
             />
           )}
@@ -165,7 +174,7 @@ function App() {
                 </div>
               </div>
 
-              {currentFolder === null && <Desktop folders={folders} onOpenFolder={setCurrentFolderKey} />}
+              {currentFolder === null && <Desktop folders={visibleFolders} onOpenFolder={setCurrentFolderKey} />}
               {currentFolder !== null && currentDoc === null && (
                 <FolderView folder={currentFolder} onOpenDoc={setCurrentDoc} onBack={() => setCurrentFolderKey(null)} />
               )}
