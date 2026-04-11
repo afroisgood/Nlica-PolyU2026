@@ -131,13 +131,6 @@ function VinylPlayer({ videoId, label }) {
         </div>
       </div>
 
-      {/* 下方控制列 */}
-      <div className="vinyl-footer">
-        <span className="vinyl-track-name" title={label}>🎵 {label}</span>
-        <button className="vinyl-btn" onClick={togglePlay}>
-          {isPlaying ? '⏸ 暫停' : '▶ 播放'}
-        </button>
-      </div>
     </div>
   );
 }
