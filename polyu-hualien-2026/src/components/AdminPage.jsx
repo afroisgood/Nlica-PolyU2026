@@ -2,7 +2,7 @@
 // 後台管理頁面（網址：/admin）
 // 使用 GitHub Personal Access Token 直接更新 public/content.json
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ref, onValue, remove } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { fetchUsers } from '../data/fetchUsers';
@@ -10,6 +10,8 @@ import { fetchUsers } from '../data/fetchUsers';
 const GITHUB_OWNER = 'afroisgood';
 const GITHUB_REPO = 'Nlica-PolyU2026';
 const CONTENT_PATH = 'polyu-hualien-2026/public/content.json';
+const MEDIA_DIR = 'polyu-hualien-2026/public/media';
+const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/polyu-hualien-2026/public/media`;
 
 const DISCUSSION_DAYS = [
   { key: '2026-05-18', label: '5/18 相見歡' },
@@ -20,10 +22,208 @@ const DISCUSSION_DAYS = [
   { key: '2026-05-24', label: '5/24 在地共創' },
 ];
 
+// ── GitHub 媒體上傳 ────────────────────────────────────────────────
+async function uploadMediaToGitHub(pat, filename, base64Content) {
+  const path = `${MEDIA_DIR}/${filename}`;
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  const headers = { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' };
+
+  // 確認是否已存在（取得 SHA）
+  let sha;
+  const checkRes = await fetch(apiUrl, { headers });
+  if (checkRes.ok) {
+    const existing = await checkRes.json();
+    sha = existing.sha;
+  }
+
+  const body = { message: `Upload media: ${filename}`, content: base64Content };
+  if (sha) body.sha = sha;
+
+  const res = await fetch(apiUrl, { method: 'PUT', headers, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || '上傳失敗');
+  }
+  return `${RAW_BASE}/${filename}`;
+}
+
+// ── 讀取檔案為 base64 ─────────────────────────────────────────────
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // ArrayBuffer → base64 (避免 btoa 的 unicode 問題)
+      const buf = reader.result;
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      bytes.forEach((b) => (binary += String.fromCharCode(b)));
+      resolve(btoa(binary));
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── 在 textarea 游標處插入文字 ────────────────────────────────────
+function buildInsertedValue(original, selStart, selEnd, before, selText, after) {
+  return original.slice(0, selStart) + before + selText + after + original.slice(selEnd);
+}
+
+// ── 工具列按鈕 ────────────────────────────────────────────────────
+function ToolbarBtn({ label, title, onMouseDown }) {
+  return (
+    <button
+      className="win95-button"
+      title={title}
+      style={{ padding: '2px 8px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+      onMouseDown={onMouseDown}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ── 插入面板（Toolbar Panel）────────────────────────────────────
+function InsertPanel({ type, pat, onInsert, onClose }) {
+  const [url, setUrl] = useState('');
+  const [altText, setAltText] = useState('');
+  const [file, setFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState('');
+  const fileRef = useRef(null);
+
+  const isImage = type === 'image';
+  const isAudio = type === 'audio';
+  const isVideo = type === 'video';
+  const isLink  = type === 'link';
+
+  const accept = isImage ? 'image/*' : isAudio ? 'audio/*' : isVideo ? 'video/*' : '';
+  const icon = isImage ? '🖼️' : isAudio ? '🎵' : isVideo ? '🎬' : '🔗';
+  const label = isImage ? '圖片' : isAudio ? '音樂' : isVideo ? '影片' : '連結';
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setIsUploading(true);
+    setUploadMsg('上傳中...');
+    try {
+      const base64 = await fileToBase64(file);
+      const rawUrl = await uploadMediaToGitHub(pat, file.name, base64);
+      setUrl(rawUrl);
+      setUploadMsg(`✅ 上傳成功`);
+    } catch (e) {
+      setUploadMsg(`❌ ${e.message}`);
+    }
+    setIsUploading(false);
+  };
+
+  const handleConfirm = () => {
+    if (!url.trim()) return;
+    if (isLink) {
+      onInsert(`[${altText || '連結文字'}](${url.trim()})`);
+    } else if (isImage) {
+      onInsert(`![${altText || '圖片'}](${url.trim()})`);
+    } else if (isAudio) {
+      onInsert(`[audio:${altText || '音樂'}](${url.trim()})`);
+    } else if (isVideo) {
+      onInsert(`[video:${altText || '影片'}](${url.trim()})`);
+    }
+    onClose();
+  };
+
+  const panelStyle = {
+    border: '2px solid #000080',
+    backgroundColor: '#c0c0c0',
+    padding: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    fontSize: '0.85rem',
+    position: 'relative',
+  };
+
+  return (
+    <div style={panelStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', marginBottom: 2 }}>
+        <span>{icon} 插入{label}</span>
+        <button className="win95-button" style={{ padding: '1px 6px', fontSize: '0.75rem' }} onClick={onClose}>✕</button>
+      </div>
+
+      {/* 說明文字 / Alt text */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <label style={{ minWidth: 60 }}>{isLink ? '顯示文字' : '說明文字'}：</label>
+        <input
+          className="win95-input"
+          style={{ flex: 1 }}
+          placeholder={isLink ? '點此前往...' : isImage ? '圖片說明' : isAudio ? '音樂標題' : '影片標題'}
+          value={altText}
+          onChange={(e) => setAltText(e.target.value)}
+        />
+      </div>
+
+      {/* URL 輸入 */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <label style={{ minWidth: 60 }}>網址：</label>
+        <input
+          className="win95-input"
+          style={{ flex: 1 }}
+          placeholder={isLink ? 'https://maps.app.goo.gl/...' : `https://... (.${isImage ? 'jpg/png' : isAudio ? 'mp3' : 'mp4'})`}
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+      </div>
+
+      {/* 檔案上傳（非連結模式） */}
+      {!isLink && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={{ minWidth: 60 }}>或上傳：</label>
+          <input
+            ref={fileRef}
+            type="file"
+            accept={accept}
+            style={{ display: 'none' }}
+            onChange={(e) => { setFile(e.target.files[0] || null); setUploadMsg(''); setUrl(''); }}
+          />
+          <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
+            onClick={() => fileRef.current?.click()}>
+            📂 選擇檔案
+          </button>
+          {file && <span style={{ fontSize: '0.8rem', color: '#333' }}>{file.name}</span>}
+          {file && !url && (
+            <button className="win95-button" style={{ padding: '2px 8px', fontSize: '0.82rem' }}
+              onClick={handleUpload} disabled={isUploading}>
+              {isUploading ? '上傳中...' : '⬆️ 上傳到 GitHub'}
+            </button>
+          )}
+          {uploadMsg && <span style={{ fontSize: '0.8rem', color: uploadMsg.startsWith('✅') ? 'green' : 'red' }}>{uploadMsg}</span>}
+        </div>
+      )}
+
+      {/* 確認插入 */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <button className="win95-button" onClick={handleConfirm} disabled={!url.trim()}>
+          ✅ 插入文件
+        </button>
+        <button className="win95-button" onClick={onClose}>取消</button>
+      </div>
+
+      {/* Markdown 預覽語法 */}
+      {url.trim() && (
+        <div style={{ marginTop: 4, padding: '4px 8px', backgroundColor: '#fff', border: '1px inset #808080', fontSize: '0.78rem', fontFamily: 'monospace', color: '#555', wordBreak: 'break-all' }}>
+          {isLink && `[${altText || '連結文字'}](${url})`}
+          {isImage && `![${altText || '圖片'}](${url})`}
+          {isAudio && `[audio:${altText || '音樂'}](${url})`}
+          {isVideo && `[video:${altText || '影片'}](${url})`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 主元件 ────────────────────────────────────────────────────────
 function AdminPage() {
   const [pat, setPat] = useState(sessionStorage.getItem('admin_pat') || '');
   const [isAuthed, setIsAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState('content'); // 'content' | 'discussion' | 'members'
+  const [activeTab, setActiveTab] = useState('content');
   const [membersData, setMembersData] = useState(null);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [membersError, setMembersError] = useState('');
@@ -33,9 +233,13 @@ function AdminPage() {
   const [selectedDocIdx, setSelectedDocIdx] = useState(0);
   const [statusMsg, setStatusMsg] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  // 討論區管理
   const [selectedDay, setSelectedDay] = useState(DISCUSSION_DAYS[0].key);
   const [discussionMsgs, setDiscussionMsgs] = useState([]);
+
+  // 工具列狀態
+  const [toolbarPanel, setToolbarPanel] = useState(null); // null | 'link' | 'image' | 'audio' | 'video'
+  const textareaRef = useRef(null);
+  const savedSel = useRef({ start: 0, end: 0, text: '' });
 
   const loadMembers = async () => {
     setIsLoadingMembers(true);
@@ -125,15 +329,12 @@ function AdminPage() {
   };
 
   const updateDocField = (folderIdx, docIdx, field, value) => {
-    setFolders((prev) => {
-      const next = prev.map((f, fi) =>
-        fi !== folderIdx ? f : {
-          ...f,
-          docs: f.docs.map((d, di) => di !== docIdx ? d : { ...d, [field]: value }),
-        }
-      );
-      return next;
-    });
+    setFolders((prev) => prev.map((f, fi) =>
+      fi !== folderIdx ? f : {
+        ...f,
+        docs: f.docs.map((d, di) => di !== docIdx ? d : { ...d, [field]: value }),
+      }
+    ));
   };
 
   const addDoc = (folderIdx) => {
@@ -152,9 +353,40 @@ function AdminPage() {
     ));
   };
 
+  // ── 工具列邏輯 ──────────────────────────────────────────────────
+  /** 在 mousedown 時儲存選取範圍（不 blur textarea） */
+  const captureSelection = (e, panelType) => {
+    e.preventDefault(); // 不 blur textarea
+    const el = textareaRef.current;
+    if (el) {
+      savedSel.current = {
+        start: el.selectionStart,
+        end:   el.selectionEnd,
+        text:  el.value.slice(el.selectionStart, el.selectionEnd),
+      };
+    }
+    setToolbarPanel(panelType === toolbarPanel ? null : panelType);
+  };
+
+  /** 插入 Markdown 語法到游標位置 */
+  const handleInsert = (syntax) => {
+    const { start, end } = savedSel.current;
+    const el = textareaRef.current;
+    if (!el) return;
+    const newValue = buildInsertedValue(el.value, start, end, syntax, '', '');
+    updateDocField(selectedFolderIdx, selectedDocIdx, 'content', newValue);
+    setToolbarPanel(null);
+    setTimeout(() => {
+      el.focus();
+      const pos = start + syntax.length;
+      el.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
   const currentFolder = folders[selectedFolderIdx];
   const currentDoc = currentFolder?.docs[selectedDocIdx];
 
+  // ── 登入頁 ──────────────────────────────────────────────────────
   if (!isAuthed) {
     return (
       <main className="win95-container">
@@ -189,6 +421,7 @@ function AdminPage() {
   const thStyle = { padding: '6px 10px', textAlign: 'left', borderBottom: '1px solid #444', whiteSpace: 'nowrap' };
   const tdStyle = { padding: '5px 10px', borderBottom: '1px solid #ddd', fontSize: '0.83rem' };
 
+  // ── 成員名單 ────────────────────────────────────────────────────
   if (activeTab === 'members') {
     const membersList = membersData
       ? Object.entries(membersData)
@@ -219,22 +452,17 @@ function AdminPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead style={{ position: 'sticky', top: 0 }}>
                     <tr style={{ backgroundColor: '#000080', color: 'white' }}>
-                      <th style={thStyle}>憑證代碼</th>
-                      <th style={thStyle}>姓名</th>
-                      <th style={thStyle}>組別</th>
-                      <th style={thStyle}>組別頭銜</th>
-                      <th style={thStyle}>導師</th>
-                      <th style={thStyle}>地點</th>
+                      <th style={thStyle}>憑證代碼</th><th style={thStyle}>姓名</th>
+                      <th style={thStyle}>組別</th><th style={thStyle}>組別頭銜</th>
+                      <th style={thStyle}>導師</th><th style={thStyle}>地點</th>
                     </tr>
                   </thead>
                   <tbody>
                     {membersList.map(({ code, name, group, factionTitle, mentor, location }, i) => (
                       <tr key={code} style={{ backgroundColor: i % 2 === 0 ? '#f0f4ff' : 'white' }}>
                         <td style={{ ...tdStyle, fontFamily: 'monospace', color: '#000080' }}>{code}</td>
-                        <td style={tdStyle}>{name}</td>
-                        <td style={tdStyle}>{group}</td>
-                        <td style={tdStyle}>{factionTitle}</td>
-                        <td style={tdStyle}>{mentor}</td>
+                        <td style={tdStyle}>{name}</td><td style={tdStyle}>{group}</td>
+                        <td style={tdStyle}>{factionTitle}</td><td style={tdStyle}>{mentor}</td>
                         <td style={tdStyle}>{location}</td>
                       </tr>
                     ))}
@@ -243,12 +471,13 @@ function AdminPage() {
               </div>
             )}
           </div>
-          <StatusBarMini pat={pat} onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} />
+          <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} />
         </div>
       </main>
     );
   }
 
+  // ── 討論區管理 ──────────────────────────────────────────────────
   if (activeTab === 'discussion') {
     return (
       <main style={{ minHeight: '100vh', backgroundColor: '#008080', padding: '12px', fontFamily: "'DotGothic16', 'Courier New', monospace" }}>
@@ -286,11 +515,7 @@ function AdminPage() {
                     </div>
                     <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.text}</div>
                   </div>
-                  <button
-                    className="win95-button"
-                    style={{ color: 'red', flexShrink: 0, fontSize: '0.8rem', padding: '2px 8px' }}
-                    onClick={() => handleDeleteMsg(msg.id)}
-                  >🗑</button>
+                  <button className="win95-button" style={{ color: 'red', flexShrink: 0, fontSize: '0.8rem', padding: '2px 8px' }} onClick={() => handleDeleteMsg(msg.id)}>🗑</button>
                 </div>
               ))}
             </div>
@@ -301,6 +526,7 @@ function AdminPage() {
     );
   }
 
+  // ── 內容管理（主頁）────────────────────────────────────────────
   return (
     <main style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#008080', padding: '12px', gap: '12px', fontFamily: "'DotGothic16', 'Courier New', monospace" }}>
 
@@ -318,20 +544,18 @@ function AdminPage() {
                   key={doc.id}
                   className="win95-file-item"
                   style={{
-                    fontSize: '0.8rem',
-                    padding: '4px 8px',
+                    fontSize: '0.8rem', padding: '4px 8px', cursor: 'pointer',
                     backgroundColor: selectedFolderIdx === fi && selectedDocIdx === di ? '#000080' : 'transparent',
                     color: selectedFolderIdx === fi && selectedDocIdx === di ? 'white' : 'black',
-                    cursor: 'pointer',
                   }}
-                  onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); }}
+                  onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
                 >
                   {doc.title}
                 </div>
               ))}
               <div
                 style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
-                onClick={() => { addDoc(fi); setSelectedFolderIdx(fi); setSelectedDocIdx(folders[fi].docs.length); }}
+                onClick={() => { addDoc(fi); setSelectedFolderIdx(fi); setSelectedDocIdx(folders[fi].docs.length); setToolbarPanel(null); }}
               >
                 ＋ 新增文件
               </div>
@@ -348,9 +572,11 @@ function AdminPage() {
             <div className="win95-btn">_</div><div className="win95-btn">□</div><div className="win95-btn">X</div>
           </div>
         </div>
+
         <div style={{ padding: 16, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {currentDoc ? (
             <>
+              {/* 標題欄 */}
               <div>
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: 4 }}>檔案標題</label>
                 <input
@@ -360,34 +586,61 @@ function AdminPage() {
                   onChange={(e) => updateDocField(selectedFolderIdx, selectedDocIdx, 'title', e.target.value)}
                 />
               </div>
-              <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+
+              {/* 編輯區（工具列 + textarea） */}
+              <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: 4 }}>內容</label>
+
+                {/* 工具列 */}
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '4px 6px', backgroundColor: '#d4d0c8', border: '1px solid #808080', borderBottom: 'none', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#555', marginRight: 4 }}>插入：</span>
+                  <ToolbarBtn label="🔗 連結" title="插入超連結（選取文字後點擊）" onMouseDown={(e) => captureSelection(e, 'link')} />
+                  <ToolbarBtn label="🖼️ 圖片" title="插入圖片（支援上傳或 URL）" onMouseDown={(e) => captureSelection(e, 'image')} />
+                  <ToolbarBtn label="🎵 音樂" title="插入音樂播放器" onMouseDown={(e) => captureSelection(e, 'audio')} />
+                  <ToolbarBtn label="🎬 影片" title="插入影片播放器" onMouseDown={(e) => captureSelection(e, 'video')} />
+                  <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#777' }}>
+                    支援 Markdown：<code style={{ fontSize: '0.72rem', backgroundColor: '#fff', padding: '0 3px' }}># 標題</code>
+                    {' '}<code style={{ fontSize: '0.72rem', backgroundColor: '#fff', padding: '0 3px' }}>**粗體**</code>
+                  </span>
+                </div>
+
+                {/* 插入面板 */}
+                {toolbarPanel && (
+                  <InsertPanel
+                    type={toolbarPanel}
+                    pat={pat}
+                    onInsert={handleInsert}
+                    onClose={() => setToolbarPanel(null)}
+                  />
+                )}
+
+                {/* Textarea */}
                 <textarea
+                  ref={textareaRef}
                   style={{
-                    flexGrow: 1,
-                    width: '100%',
-                    boxSizing: 'border-box',
+                    flexGrow: 1, width: '100%', boxSizing: 'border-box',
                     fontFamily: "'DotGothic16', 'Courier New', monospace",
-                    fontSize: '1rem',
-                    padding: 10,
-                    border: '2px inset #808080',
-                    resize: 'none',
-                    lineHeight: 1.8,
-                    minHeight: 300,
+                    fontSize: '0.95rem', padding: 10,
+                    border: '2px inset #808080', resize: 'none',
+                    lineHeight: 1.8, minHeight: 280,
                   }}
                   value={currentDoc.content || ''}
                   onChange={(e) => updateDocField(selectedFolderIdx, selectedDocIdx, 'content', e.target.value)}
                 />
+
+                {/* Markdown 語法提示 */}
+                <div style={{ fontSize: '0.72rem', color: '#666', padding: '3px 4px', backgroundColor: '#d4d0c8', borderTop: '1px solid #808080' }}>
+                  <strong>提示：</strong>
+                  {' '}[連結文字](url)　![圖片說明](url)　[audio:標題](url)　[video:標題](url)　# 大標　## 次標　**粗體**　--- 分隔線
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+
+              {/* 操作按鈕列 */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button className="win95-button" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? '儲存中...' : '💾 儲存到 GitHub'}
                 </button>
-                <button
-                  className="win95-button"
-                  style={{ color: 'red' }}
-                  onClick={() => deleteDoc(selectedFolderIdx, selectedDocIdx)}
-                >
+                <button className="win95-button" style={{ color: 'red' }} onClick={() => deleteDoc(selectedFolderIdx, selectedDocIdx)}>
                   🗑 刪除此文件
                 </button>
                 {statusMsg && <span style={{ fontWeight: 'bold', color: statusMsg.startsWith('✅') ? 'green' : 'red' }}>{statusMsg}</span>}
@@ -397,7 +650,12 @@ function AdminPage() {
             <p>&gt; 請從左側選擇一份文件進行編輯。</p>
           )}
         </div>
-        <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} />
+
+        <StatusBarMini
+          onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }}
+          onDiscussion={() => setActiveTab('discussion')}
+          onMembers={() => setActiveTab('members')}
+        />
       </div>
     </main>
   );
