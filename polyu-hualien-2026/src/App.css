@@ -619,6 +619,135 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════
+   黑膠播放器 (VinylPlayer)
+   ═══════════════════════════════════════════════════════ */
+.vinyl-wrap {
+  position: relative;          /* 讓隱藏 iframe 相對定位 */
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin: 10px 0;
+  /* 木紋質感底板 */
+  background: linear-gradient(160deg, #3e3028 0%, #251c14 60%, #1e1610 100%);
+  border-top:   2px solid #6a5040;
+  border-left:  2px solid #6a5040;
+  border-right: 2px solid #100c08;
+  border-bottom: 2px solid #100c08;
+  box-shadow: 3px 3px 0 #000;
+  overflow: hidden;            /* 讓背景不外露 */
+}
+
+/* 轉盤面板（黑色區域） */
+.vinyl-panel {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 16px 12px 10px 16px;
+}
+
+/* 轉盤底座（深灰圓形） */
+.vinyl-platter {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3a3a, #111 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 0 4px #222,
+    0 0 0 5px #444,
+    inset 0 2px 6px rgba(0,0,0,0.8);
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+/* 黑膠唱片 */
+.vinyl-disc {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.2s;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+.vinyl-disc:hover { filter: brightness(1.18) drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+
+/* 旋轉動畫（33 RPM ≈ 1.8s/圈） */
+.vinyl-spinning {
+  animation: vinyl-spin 1.8s linear infinite;
+}
+@keyframes vinyl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 唱臂 */
+.vinyl-tonearm-wrap {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  width: 60px;
+  height: 90px;
+}
+
+.vinyl-tonearm-svg {
+  transform-origin: 62px 10px;   /* 樞紐點 */
+  transform: rotate(-28deg);     /* 休息位置（唱臂抬起） */
+  transition: transform 0.8s ease;
+  filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
+}
+.vinyl-tonearm-svg.on-record {
+  transform: rotate(0deg);       /* 落針位置 */
+}
+
+/* 下方控制列 */
+.vinyl-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 10px;
+  background: rgba(0,0,0,0.25);
+  border-top: 1px solid #1a1210;
+}
+
+.vinyl-track-name {
+  font-size: 0.72rem;
+  color: #c8b890;
+  font-family: 'DotGothic16', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.vinyl-btn {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-family: 'DotGothic16', monospace;
+  font-size: 0.75rem;
+  background: #b0a080;
+  border-top:   2px solid #d8c898;
+  border-left:  2px solid #d8c898;
+  border-right: 2px solid #706040;
+  border-bottom: 2px solid #706040;
+  color: #1a1008;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.vinyl-btn:active {
+  border-top:   2px solid #706040;
+  border-left:  2px solid #706040;
+  border-right: 2px solid #d8c898;
+  border-bottom: 2px solid #d8c898;
+}
+
+/* ═══════════════════════════════════════════════════════
    Lightbox 圖片浮層
    ═══════════════════════════════════════════════════════ */
 .lightbox-overlay {

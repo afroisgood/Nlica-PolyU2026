@@ -5,6 +5,7 @@
 //       YouTube / YouTube Music URL 自動轉 iframe 嵌入
 
 import React from 'react';
+import VinylPlayer from '../components/VinylPlayer.jsx';
 
 // ── YouTube URL 解析 ─────────────────────────────────────────────
 const YT_PATTERNS = [
@@ -20,11 +21,11 @@ export function extractYouTubeId(url) {
   return null;
 }
 
-/** YouTube iframe 嵌入元件 */
-function YouTubeEmbed({ videoId, label, icon, keyStr }) {
+/** YouTube 影片 iframe 嵌入（video 專用） */
+function YouTubeEmbed({ videoId, label }) {
   return (
-    <div key={keyStr} className="md-media-block md-youtube-block">
-      <span className="md-media-label">{icon} {label}</span>
+    <div className="md-media-block md-youtube-block">
+      <span className="md-media-label">🎬 {label}</span>
       <div className="md-youtube-wrapper">
         <iframe
           src={`https://www.youtube.com/embed/${videoId}`}
@@ -75,7 +76,9 @@ function parseInline(text, onImageClick, keyPrefix) {
         const ytId = extractYouTubeId(url);
         parts.push(
           ytId
-            ? <YouTubeEmbed key={`${keyPrefix}-ytaudio-${key++}`} videoId={ytId} label={label} icon="🎵" />
+            // YouTube 音樂 → 黑膠播放器（隱藏影片，只播音訊）
+            ? <VinylPlayer key={`${keyPrefix}-vinyl-${key++}`} videoId={ytId} label={label} />
+            // 一般音訊檔 → HTML audio 元素
             : <div key={`${keyPrefix}-audio-${key++}`} className="md-media-block">
                 <span className="md-media-label">🎵 {label}</span>
                 <audio controls src={url} style={{ display: 'block', width: '100%', marginTop: 4 }} />
@@ -86,7 +89,9 @@ function parseInline(text, onImageClick, keyPrefix) {
         const ytId = extractYouTubeId(url);
         parts.push(
           ytId
-            ? <YouTubeEmbed key={`${keyPrefix}-ytvideo-${key++}`} videoId={ytId} label={label} icon="🎬" />
+            // YouTube 影片 → iframe 嵌入播放器
+            ? <YouTubeEmbed key={`${keyPrefix}-ytvideo-${key++}`} videoId={ytId} label={label} />
+            // 一般影片檔 → HTML video 元素
             : <div key={`${keyPrefix}-video-${key++}`} className="md-media-block">
                 <span className="md-media-label">🎬 {label}</span>
                 <video controls src={url} style={{ display: 'block', maxWidth: '100%', marginTop: 4 }} />
