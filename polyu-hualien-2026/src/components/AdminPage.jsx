@@ -308,17 +308,32 @@ function AdminPage() {
     setIsSaving(true);
     setStatusMsg('儲存中...');
     try {
+      const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${CONTENT_PATH}`;
+      const headers = { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' };
+
+      // 1. 重新抓最新 SHA（避免過期 SHA 造成 409 衝突）
+      const checkRes = await fetch(apiUrl, { headers });
+      if (!checkRes.ok) throw new Error('無法取得檔案資訊，請確認 PAT 仍有效。');
+      const checkData = await checkRes.json();
+      const latestSha = checkData.sha;
+
+      // 2. 用 TextEncoder 做可靠的 UTF-8 → base64 轉換
       const newContent = JSON.stringify({ folders }, null, 2);
-      const encoded = btoa(unescape(encodeURIComponent(newContent)));
-      const res = await fetch(
-        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${CONTENT_PATH}`,
-        {
-          method: 'PUT',
-          headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'Update content via admin panel', content: encoded, sha: fileSha }),
-        }
-      );
-      if (!res.ok) throw new Error('儲存失敗，請重試。');
+      const bytes = new TextEncoder().encode(newContent);
+      let binary = '';
+      bytes.forEach((b) => (binary += String.fromCharCode(b)));
+      const encoded = btoa(binary);
+
+      // 3. 推送更新
+      const res = await fetch(apiUrl, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ message: 'Update content via admin panel', content: encoded, sha: latestSha }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `HTTP ${res.status}`);
+      }
       const data = await res.json();
       setFileSha(data.content.sha);
       setStatusMsg('✅ 儲存成功！網頁內容已更新。');
