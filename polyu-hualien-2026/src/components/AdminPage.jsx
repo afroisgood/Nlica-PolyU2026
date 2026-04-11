@@ -26,7 +26,9 @@ function AdminPage() {
     if (!res.ok) throw new Error('驗證失敗，請確認 PAT 是否正確。');
     const data = await res.json();
     setFileSha(data.sha);
-    const content = JSON.parse(atob(data.content.replace(/\n/g, '')));
+    const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, '')), (c) => c.charCodeAt(0));
+    const text = new TextDecoder('utf-8').decode(bytes);
+    const content = JSON.parse(text);
     setFolders(content.folders);
     setIsAuthed(true);
     sessionStorage.setItem('admin_pat', token);
