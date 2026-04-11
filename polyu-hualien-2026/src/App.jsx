@@ -73,6 +73,17 @@ function App() {
     return `C:\\${currentFolder.title}\\${currentDoc.title}`;
   })();
 
+  const handleLogout = () => {
+    setStep(0);
+    setPlayerData(null);
+    setAccessCode('');
+    setIsGuest(false);
+    setGreeting('');
+    setCurrentFolderKey(null);
+    setCurrentDoc(null);
+    setShowDiscussion(false);
+  };
+
   const handleGuestEnter = () => {
     const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
     setGreeting(randomMsg);
@@ -195,7 +206,7 @@ function App() {
           )}
         </div>
 
-        <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} />
+        <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} onLogout={step === 1 ? handleLogout : null} />
       </div>
     </main>
   );
