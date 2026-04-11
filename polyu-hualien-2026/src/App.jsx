@@ -16,7 +16,7 @@ import './App.css';
 const GROUP_TASK_FOLDER = {
   key: 'group_tasks',
   title: '各組學習服務安排',
-  icon: 'icon-shield',
+  icon: 'icon-target',
   docs: [
     { id: 'doc11', title: '⚔️ [機密] 我的專屬陣營任務.txt', content: null },
     { id: 'doc12', title: '🎒 行前裝備檢查表.txt', content: null },

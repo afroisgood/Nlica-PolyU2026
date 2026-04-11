@@ -244,6 +244,11 @@ body {
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M1 2h6l2 2h6v10H1z"/><path fill="%23FFD700" d="M2 3h4.5l2 2H14v8H2z"/><path fill="%23FFF" d="M2 3h4v1H2z"/><path fill="%23DAA520" d="M2 6h12v6H2z"/></svg>');
 }
 
+/* 靶心 🎯 */
+.icon-target {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23222" x="2" y="1" width="12" height="14"/><rect fill="%23222" x="1" y="2" width="14" height="12"/><rect fill="%23CC0000" x="3" y="2" width="10" height="12"/><rect fill="%23CC0000" x="2" y="3" width="12" height="10"/><rect fill="%23EEE" x="4" y="4" width="8" height="8"/><rect fill="%23CC0000" x="5" y="5" width="6" height="6"/><rect fill="%23EEE" x="7" y="7" width="2" height="2"/></svg>');
+}
+
 /* 任務盾牌 🛡️ */
 .icon-shield {
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M3 2h10v5c0 4-5 8-5 8s-5-4-5-8z"/><path fill="%23C0C0C0" d="M4 3h8v4c0 3-4 6-4 6s-4-3-4-6z"/><path fill="%23008080" d="M5 4h6v3c0 2-3 4-3 4s-3-2-3-4z"/></svg>');
