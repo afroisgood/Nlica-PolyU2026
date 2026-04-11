@@ -1,7 +1,7 @@
 // src/components/StatusBar.jsx
 import { useState, useEffect } from 'react';
 
-function StatusBar({ path, nickname, playerData, onLogout }) {
+function StatusBar({ path, nickname, playerData }) {
   const [time, setTime] = useState('');
 
   useEffect(() => {
@@ -25,26 +25,7 @@ function StatusBar({ path, nickname, playerData, onLogout }) {
             {nickname}｜{playerData.group}
           </div>
         )}
-        {onLogout && (
-          <button
-            onClick={onLogout}
-            style={{
-              fontFamily: 'inherit',
-              fontSize: '0.78rem',
-              padding: '0 8px',
-              height: '20px',
-              cursor: 'pointer',
-              borderTop: '2px solid var(--win95-light)',
-              borderLeft: '2px solid var(--win95-light)',
-              borderRight: '2px solid var(--win95-dark)',
-              borderBottom: '2px solid var(--win95-dark)',
-              backgroundColor: 'var(--win95-window)',
-            }}
-          >
-            登出
-          </button>
-        )}
-        <div className="statusbar-cell statusbar-time">{time}</div>
+<div className="statusbar-cell statusbar-time">{time}</div>
       </div>
     </div>
   );
