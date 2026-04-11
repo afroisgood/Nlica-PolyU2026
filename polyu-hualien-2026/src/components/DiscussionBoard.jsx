@@ -74,12 +74,12 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0, overflow: 'hidden' }}>
 
       {/* 頂部 toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <button className="win95-button" onClick={onBack}>← 返回</button>
-        <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>💬 討論區</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <button className="win95-button" style={{ margin: 0, flexShrink: 0 }} onClick={onBack}>← 返回</button>
+        <span style={{ fontWeight: 'bold', fontSize: '1rem', flexShrink: 0 }}>💬 討論區</span>
         <select
           className="win95-input"
-          style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 6px', cursor: 'pointer' }}
+          style={{ marginLeft: 'auto', marginTop: 0, fontSize: '0.9rem', padding: '2px 6px', cursor: 'pointer', minWidth: 0 }}
           value={selectedDay}
           onChange={(e) => setSelectedDay(e.target.value)}
         >

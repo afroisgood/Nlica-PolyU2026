@@ -164,18 +164,18 @@ function App() {
 
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '15px' }}>
-                <div style={{ width: '80px', height: '80px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '12px', flexWrap: 'wrap' }}>
+                <div style={{ width: '64px', height: '64px', minWidth: '64px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
                   {playerData?.avatarUrl
                     ? <img src={playerData.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
                     : <div className="pixel-icon icon-robot-head" style={{ top: '6px' }}></div>
                   }
                 </div>
-                <div>
-                  <h2 style={{ marginTop: 0, marginBottom: '8px', fontSize: '1.6rem' }}>
+                <div style={{ minWidth: 0 }}>
+                  <h2 style={{ marginTop: 0, marginBottom: '6px', fontSize: 'clamp(1.1rem, 4vw, 1.6rem)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {isGuest ? '嗨，訪客！' : `嗨，${playerData?.name || accessCode}！`}
                   </h2>
-                  <p style={{ margin: 0, color: 'var(--win95-title)', fontWeight: 'bold', fontSize: '1.1rem' }}>&gt; {greeting}</p>
+                  <p style={{ margin: 0, color: 'var(--win95-title)', fontWeight: 'bold', fontSize: 'clamp(0.85rem, 3vw, 1.1rem)' }}>&gt; {greeting}</p>
                 </div>
               </div>
 

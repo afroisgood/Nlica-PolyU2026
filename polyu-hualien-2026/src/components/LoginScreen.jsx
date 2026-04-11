@@ -18,10 +18,12 @@ function LoginScreen({ accessCode, onAccessCodeChange, onVerify, onGuestEnter, e
         placeholder="例如: POLYU-ART-01"
       />
       <br />
-      <button className="win95-button" onClick={onVerify}>驗證憑證</button>
-      <button className="win95-button" style={{ marginLeft: '10px', color: '#555' }} onClick={onGuestEnter}>
-        忽略驗證直接進入
-      </button>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
+        <button className="win95-button" style={{ margin: 0 }} onClick={onVerify}>驗證憑證</button>
+        <button className="win95-button" style={{ margin: 0, color: '#555' }} onClick={onGuestEnter}>
+          忽略驗證直接進入
+        </button>
+      </div>
       {errorMsg && <p style={{ color: 'red', marginTop: '15px', fontWeight: 'bold' }}>{errorMsg}</p>}
     </div>
   );
