@@ -21,7 +21,9 @@ export const welcomeMessages = [
   "Loading 地方共鳴模組... 載入完成！",
 ];
 
-export const systemFolders = [
+// systemFolders 已移至 public/content.json，由 App.jsx 在執行時 fetch
+
+export const _legacySystemFolders = [
   {
     key: 'activity_info',
     title: '活動說明',
