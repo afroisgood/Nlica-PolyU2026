@@ -182,19 +182,19 @@ function App() {
                     : <div className="pixel-icon icon-robot-head" style={{ top: '6px' }}></div>
                   }
                 </div>
-                <button
-                  className="win95-button"
-                  onClick={handleLogout}
-                  style={{ marginLeft: 'auto', alignSelf: 'flex-start', fontSize: '0.85rem' }}
-                >
-                  🔒 登出 / 切換帳號
-                </button>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ minWidth: 0, flexGrow: 1 }}>
                   <h2 style={{ marginTop: 0, marginBottom: '6px', fontSize: 'clamp(1.1rem, 4vw, 1.6rem)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {isGuest ? '嗨，訪客！' : `嗨，${playerData?.name || accessCode}！`}
                   </h2>
                   <p style={{ margin: 0, color: 'var(--win95-title)', fontWeight: 'bold', fontSize: 'clamp(0.85rem, 3vw, 1.1rem)' }}>&gt; {greeting}</p>
                 </div>
+                <button
+                  className="win95-button"
+                  onClick={handleLogout}
+                  style={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                >
+                  登出
+                </button>
               </div>
 
               {!showDiscussion && currentFolder === null && (
