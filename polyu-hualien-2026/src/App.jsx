@@ -11,8 +11,14 @@ import StatusBar from './components/StatusBar';
 import AdminPage from './components/AdminPage';
 import DiscussionBoard from './components/DiscussionBoard';
 import NotificationBalloon from './components/NotificationBalloon';
-import { playBoot, playClick, playError, playNotification } from './lib/sounds';
+import ContextMenu from './components/ContextMenu';
+import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
 import './App.css';
+
+// 偵測觸控裝置
+const isTouchDevice = () =>
+  typeof window !== 'undefined' &&
+  (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
 
 // 固定的各組任務資料夾（內容依登入者動態產生，不放 content.json）
 const GROUP_TASK_FOLDER = {
@@ -41,7 +47,11 @@ function App() {
   const [showDiscussion, setShowDiscussion] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showAbout, setShowAbout] = useState(false);
+  const [menuPos, setMenuPos] = useState(null); // { x, y }
+  const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const notifIdRef = useRef(0);
+  const longPressTimer = useRef(null);
+  const longPressPos = useRef({ x: 0, y: 0 });
 
   const addNotification = (notif) => {
     const id = ++notifIdRef.current;
@@ -104,11 +114,8 @@ function App() {
     setGreeting(randomMsg);
     setIsGuest(true);
     setStep(1);
-    setTimeout(() => addNotification({
-      title: '歡迎使用',
-      message: '右鍵點擊桌面可查看更多功能 →',
-      icon: '💡',
-    }), 1200);
+    const hint = isTouchDevice() ? '長按畫面可查看更多功能 →' : '右鍵點擊任意處可查看更多功能 →';
+    setTimeout(() => addNotification({ title: '歡迎使用', message: hint, icon: '💡' }), 1200);
   };
 
   const handleVerifyCode = () => {
@@ -121,11 +128,9 @@ function App() {
       setPlayerData(data);
       setErrorMsg('');
       setStep(1);
-      setTimeout(() => addNotification({
-        title: '系統通知',
-        message: `${data.name}，你的陣營任務已解鎖！`,
-        icon: '🎯',
-      }), 1200);
+      const hint = isTouchDevice() ? '長按畫面可查看更多功能 →' : '右鍵點擊任意處可查看更多功能 →';
+      setTimeout(() => addNotification({ title: '系統通知', message: `${data.name}，你的陣營任務已解鎖！`, icon: '🎯' }), 1200);
+      setTimeout(() => addNotification({ title: '提示', message: hint, icon: '💡' }), 2400);
     } else {
       playError();
       setErrorMsg('錯誤：查無此憑證代碼，請重新輸入。');
@@ -159,6 +164,36 @@ function App() {
       .catch((err) => setFetchError(err.message));
   }, [isBooting]);
 
+  // ── 右鍵 / 長按選單 ────────────────────────────────────────────
+  const handleToggleSound = () => {
+    const next = toggleSound();
+    setSoundOn(next);
+  };
+
+  const contextMenuItems = [
+    { icon: soundOn ? '🔊' : '🔇', label: `音效：${soundOn ? '開' : '關'}`, action: handleToggleSound },
+    { separator: true },
+    { icon: 'ℹ️', label: '關於此系統', action: () => setShowAbout(true) },
+  ];
+
+  // 桌面：右鍵
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  };
+
+  // 行動：長按 500ms
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    longPressPos.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimer.current = setTimeout(() => {
+      navigator.vibrate?.(40);
+      setMenuPos({ ...longPressPos.current });
+    }, 500);
+  };
+  const handleTouchMove = () => clearTimeout(longPressTimer.current);
+  const handleTouchEnd  = () => clearTimeout(longPressTimer.current);
+
   if (isAdmin) return <AdminPage />;
 
   if (isBooting) return <BootScreen onComplete={() => { setIsBooting(false); playBoot(); }} />;
@@ -189,7 +224,14 @@ function App() {
 
   return (
     <main className="win95-container">
-      <div className="win95-window">
+      <div
+        className="win95-window"
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={() => setMenuPos(null)}
+      >
 
         <div
           className="win95-title-bar"
@@ -244,7 +286,6 @@ function App() {
                   onOpenFolder={setCurrentFolderKey}
                   onOpenDiscussion={() => setShowDiscussion(true)}
                   onLogout={handleLogout}
-                  onRefresh={handleRefresh}
                   onAbout={() => setShowAbout(true)}
                 />
               )}
@@ -266,6 +307,16 @@ function App() {
 
       {/* 通知氣球 */}
       <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
+
+      {/* 全域右鍵 / 長按選單 */}
+      {menuPos && (
+        <ContextMenu
+          x={menuPos.x}
+          y={menuPos.y}
+          items={contextMenuItems}
+          onClose={() => setMenuPos(null)}
+        />
+      )}
 
       {/* 關於此系統 dialog */}
       {showAbout && (
