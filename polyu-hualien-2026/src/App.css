@@ -251,7 +251,22 @@ body {
 
 /* 聯絡電話 ☎️ */
 .icon-phone {
-  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M2 4h12v8H2z"/><path fill="%23C0C0C0" d="M3 5h10v6H3z"/><path fill="%23000" d="M4 6h3v1H4zm0 2h3v1H4zm0 2h3v1H4zm5-4h3v1H9zm0 2h3v1H9zm0 2h3v1H9z"/></svg>');
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23444" x="4" y="0" width="7" height="1"/><rect fill="%23444" x="3" y="1" width="9" height="1"/><rect fill="%23444" x="2" y="2" width="10" height="3"/><rect fill="%23444" x="3" y="5" width="4" height="1"/><rect fill="%23444" x="2" y="4" width="3" height="8"/><rect fill="%23444" x="3" y="10" width="4" height="1"/><rect fill="%23444" x="2" y="11" width="10" height="3"/><rect fill="%23444" x="3" y="14" width="9" height="1"/><rect fill="%23444" x="4" y="15" width="7" height="1"/><rect fill="%23666" x="3" y="6" width="1" height="4"/><rect fill="%23888" x="3" y="2" width="8" height="3"/><rect fill="%23888" x="3" y="11" width="8" height="3"/><rect fill="%23555" x="4" y="2" width="1" height="1"/><rect fill="%23555" x="6" y="2" width="1" height="1"/><rect fill="%23555" x="8" y="2" width="1" height="1"/><rect fill="%23555" x="5" y="3" width="1" height="1"/><rect fill="%23555" x="7" y="3" width="1" height="1"/><rect fill="%23555" x="9" y="3" width="1" height="1"/><rect fill="%23555" x="4" y="4" width="1" height="1"/><rect fill="%23555" x="6" y="4" width="1" height="1"/><rect fill="%23555" x="8" y="4" width="1" height="1"/><rect fill="%23555" x="4" y="11" width="1" height="1"/><rect fill="%23555" x="6" y="11" width="1" height="1"/><rect fill="%23555" x="8" y="11" width="1" height="1"/><rect fill="%23555" x="5" y="12" width="1" height="1"/><rect fill="%23555" x="7" y="12" width="1" height="1"/><rect fill="%23555" x="9" y="12" width="1" height="1"/><rect fill="%23555" x="4" y="13" width="1" height="1"/><rect fill="%23555" x="6" y="13" width="1" height="1"/><rect fill="%23555" x="8" y="13" width="1" height="1"/></svg>');
+}
+
+/* 捲軸 📜 */
+.icon-scroll {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23000" x="3" y="2" width="10" height="12"/><rect fill="%23F5DEB3" x="4" y="4" width="8" height="8"/><rect fill="%23000" x="1" y="1" width="14" height="3"/><rect fill="%23C8A870" x="2" y="1" width="12" height="2"/><rect fill="%23A0783A" x="2" y="2" width="12" height="1"/><rect fill="%23000" x="1" y="12" width="14" height="3"/><rect fill="%23C8A870" x="2" y="12" width="12" height="2"/><rect fill="%23A0783A" x="2" y="13" width="12" height="1"/><rect fill="%23704214" x="5" y="5" width="6" height="1"/><rect fill="%23704214" x="5" y="7" width="6" height="1"/><rect fill="%23704214" x="5" y="9" width="4" height="1"/></svg>');
+}
+
+/* 地圖 🗺️ */
+.icon-map {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23000" x="1" y="2" width="14" height="12"/><rect fill="%23FFFDE7" x="2" y="3" width="12" height="10"/><rect fill="%23BBBB88" x="6" y="3" width="1" height="10"/><rect fill="%23BBBB88" x="10" y="3" width="1" height="10"/><rect fill="%23D4A017" x="2" y="8" width="4" height="1"/><rect fill="%23D4A017" x="7" y="8" width="3" height="1"/><rect fill="%23D4A017" x="11" y="8" width="3" height="1"/><rect fill="%23CC0000" x="3" y="3" width="3" height="3"/><rect fill="%23FF6666" x="4" y="3" width="1" height="1"/><rect fill="%23CC0000" x="4" y="6" width="1" height="2"/></svg>');
+}
+
+/* 清單 ✅ */
+.icon-checklist {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23000" x="2" y="1" width="12" height="14"/><rect fill="%23FFFFFF" x="3" y="2" width="10" height="12"/><rect fill="%23000" x="4" y="3" width="3" height="3"/><rect fill="%2300BB00" x="5" y="4" width="1" height="1"/><rect fill="%23888" x="8" y="4" width="5" height="1"/><rect fill="%23000" x="4" y="7" width="3" height="3"/><rect fill="%2300BB00" x="5" y="8" width="1" height="1"/><rect fill="%23888" x="8" y="8" width="5" height="1"/><rect fill="%23000" x="4" y="11" width="3" height="3"/><rect fill="%23FFF" x="5" y="12" width="1" height="1"/><rect fill="%23888" x="8" y="12" width="5" height="1"/></svg>');
 }
 
 /* 討論區 💬 */

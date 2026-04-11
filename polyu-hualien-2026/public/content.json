@@ -3,7 +3,7 @@
     {
       "key": "activity_info",
       "title": "活動說明",
-      "icon": "icon-folder",
+      "icon": "icon-scroll",
       "docs": [
         {
           "id": "doc1",
@@ -20,7 +20,7 @@
     {
       "key": "host_intro",
       "title": "參訪單位介紹",
-      "icon": "icon-folder",
+      "icon": "icon-map",
       "docs": [
         {
           "id": "doc3",
@@ -37,7 +37,7 @@
     {
       "key": "schedule",
       "title": "主要流程表",
-      "icon": "icon-folder",
+      "icon": "icon-checklist",
       "docs": [
         {
           "id": "doc5",
