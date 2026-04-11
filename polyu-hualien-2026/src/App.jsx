@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { fetchUsers } from './data/fetchUsers';
 import { welcomeMessages, groupThemeColors } from './data/systemData';
 import LoginScreen from './components/LoginScreen';
@@ -10,6 +10,8 @@ import BootScreen from './components/BootScreen';
 import StatusBar from './components/StatusBar';
 import AdminPage from './components/AdminPage';
 import DiscussionBoard from './components/DiscussionBoard';
+import NotificationBalloon from './components/NotificationBalloon';
+import { playBoot, playClick, playError, playNotification } from './lib/sounds';
 import './App.css';
 
 // 固定的各組任務資料夾（內容依登入者動態產生，不放 content.json）
@@ -37,6 +39,18 @@ function App() {
   const [currentFolderKey, setCurrentFolderKey] = useState(null);
   const [currentDoc, setCurrentDoc] = useState(null);
   const [showDiscussion, setShowDiscussion] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showAbout, setShowAbout] = useState(false);
+  const notifIdRef = useRef(0);
+
+  const addNotification = (notif) => {
+    const id = ++notifIdRef.current;
+    setNotifications((prev) => [...prev, { id, ...notif }]);
+    playNotification();
+  };
+  const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
   // 若網址是 /admin，直接顯示後台
   const isAdmin = window.location.pathname === '/admin';
@@ -85,23 +99,50 @@ function App() {
   };
 
   const handleGuestEnter = () => {
+    playClick();
     const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
     setGreeting(randomMsg);
     setIsGuest(true);
     setStep(1);
+    setTimeout(() => addNotification({
+      title: '歡迎使用',
+      message: '右鍵點擊桌面可查看更多功能 →',
+      icon: '💡',
+    }), 1200);
   };
 
   const handleVerifyCode = () => {
     if (!accessCode) { setErrorMsg('錯誤：請輸入憑證代碼。'); return; }
     const data = usersDatabase[accessCode];
     if (data) {
+      playClick();
       const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
       setGreeting(randomMsg);
       setPlayerData(data);
       setErrorMsg('');
       setStep(1);
+      setTimeout(() => addNotification({
+        title: '系統通知',
+        message: `${data.name}，你的陣營任務已解鎖！`,
+        icon: '🎯',
+      }), 1200);
     } else {
+      playError();
       setErrorMsg('錯誤：查無此憑證代碼，請重新輸入。');
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      const [users, folders] = await Promise.all([
+        fetchUsers(),
+        fetch('/content.json').then((r) => r.json()).then((d) => d.folders),
+      ]);
+      setUsersDatabase(users);
+      setContentFolders(folders);
+      addNotification({ title: '系統', message: '資料已重新整理完成。', icon: '🔄' });
+    } catch {
+      addNotification({ title: '錯誤', message: '重新整理失敗，請稍後再試。', icon: '⚠️' });
     }
   };
 
@@ -120,7 +161,7 @@ function App() {
 
   if (isAdmin) return <AdminPage />;
 
-  if (isBooting) return <BootScreen onComplete={() => setIsBooting(false)} />;
+  if (isBooting) return <BootScreen onComplete={() => { setIsBooting(false); playBoot(); }} />;
 
   if (!usersDatabase && !fetchError) {
     return (
@@ -198,7 +239,14 @@ function App() {
               </div>
 
               {!showDiscussion && currentFolder === null && (
-                <Desktop folders={visibleFolders} onOpenFolder={setCurrentFolderKey} onOpenDiscussion={() => setShowDiscussion(true)} />
+                <Desktop
+                  folders={visibleFolders}
+                  onOpenFolder={setCurrentFolderKey}
+                  onOpenDiscussion={() => setShowDiscussion(true)}
+                  onLogout={handleLogout}
+                  onRefresh={handleRefresh}
+                  onAbout={() => setShowAbout(true)}
+                />
               )}
               {!showDiscussion && currentFolder !== null && currentDoc === null && (
                 <FolderView folder={currentFolder} onOpenDoc={setCurrentDoc} onBack={() => setCurrentFolderKey(null)} />
@@ -215,6 +263,49 @@ function App() {
 
         <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} />
       </div>
+
+      {/* 通知氣球 */}
+      <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
+
+      {/* 關於此系統 dialog */}
+      {showAbout && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000,
+        }}
+          onClick={() => setShowAbout(false)}
+        >
+          <div className="win95-window" style={{ width: 320 }} onClick={(e) => e.stopPropagation()}>
+            <div className="win95-title-bar">
+              <span>關於此系統</span>
+              <div className="win95-title-buttons">
+                <div className="win95-btn" onClick={() => setShowAbout(false)}>X</div>
+              </div>
+            </div>
+            <div className="win95-content" style={{ textAlign: 'center', padding: '24px 20px' }}>
+              <div className="pixel-icon icon-robot-head" style={{ margin: '0 auto 12px' }} />
+              <h3 style={{ margin: '0 0 6px' }}>PolyU_Hualien_Tour.exe</h3>
+              <p style={{ margin: '4px 0', fontSize: '0.9rem' }}>版本 2026.05.18</p>
+              <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#555' }}>
+                PolyU × 牛犁協會<br />花蓮豐田社區學習計畫
+              </p>
+              <hr style={{ margin: '14px 0', border: 'none', borderTop: '1px solid #c0c0c0' }} />
+              <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>
+                Built with React + Vite + Firebase
+              </p>
+              <button
+                className="win95-button"
+                style={{ marginTop: 18 }}
+                onClick={() => { playClick(); setShowAbout(false); }}
+              >
+                確定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
