@@ -6,6 +6,8 @@ import { useState, useEffect, useRef } from 'react';
 import { ref, onValue, remove } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { fetchUsers } from '../data/fetchUsers';
+import { renderMarkdown } from '../lib/markdown.jsx';
+import Lightbox from './Lightbox.jsx';
 
 const GITHUB_OWNER = 'afroisgood';
 const GITHUB_REPO = 'Nlica-PolyU2026';
@@ -288,10 +290,24 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
           <button className="win95-button" onClick={onClose}>取消</button>
         </div>
 
-        {/* 預覽語法 */}
+        {/* 語法提示 */}
         {previewSyntax && (
           <div style={{ padding: '4px 8px', backgroundColor: '#fff', border: '1px inset #808080', fontSize: '0.78rem', fontFamily: 'monospace', color: '#555', wordBreak: 'break-all' }}>
             {previewSyntax}
+          </div>
+        )}
+
+        {/* 圖片縮圖預覽 */}
+        {isImage && activeUrl.trim() && (
+          <div style={{ padding: '4px 0' }}>
+            <div style={{ fontSize: '0.75rem', color: '#555', marginBottom: 3 }}>縮圖預覽：</div>
+            <img
+              src={activeUrl.trim()}
+              alt="preview"
+              style={{ maxWidth: '100%', maxHeight: 120, objectFit: 'contain', border: '1px solid #808080', display: 'block', background: '#fff' }}
+              onError={e => { e.target.style.display = 'none'; }}
+              onLoad={e => { e.target.style.display = 'block'; }}
+            />
           </div>
         )}
       </div>
@@ -318,6 +334,10 @@ function AdminPage() {
 
   // 工具列狀態
   const [toolbarPanel, setToolbarPanel] = useState(null); // null | 'link' | 'image' | 'audio' | 'video'
+  const [showPreview, setShowPreview]   = useState(false);
+  const [previewLightbox, setPreviewLightbox] = useState(null);
+  const [dragItem, setDragItem]         = useState(null); // { fi, di }
+  const [dragOver, setDragOver]         = useState(null); // { fi, di }
   const textareaRef = useRef(null);
   const savedSel = useRef({ start: 0, end: 0, text: '' });
 
@@ -634,20 +654,48 @@ function AdminPage() {
               <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: 4, color: '#000080' }}>
                 📁 {folder.title}
               </div>
-              {folder.docs.map((doc, di) => (
-                <div
-                  key={doc.id}
-                  className="win95-file-item"
-                  style={{
-                    fontSize: '0.8rem', padding: '4px 8px', cursor: 'pointer',
-                    backgroundColor: selectedFolderIdx === fi && selectedDocIdx === di ? '#000080' : 'transparent',
-                    color: selectedFolderIdx === fi && selectedDocIdx === di ? 'white' : 'black',
-                  }}
-                  onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
-                >
-                  {doc.title}
-                </div>
-              ))}
+              {folder.docs.map((doc, di) => {
+                const isSelected = selectedFolderIdx === fi && selectedDocIdx === di;
+                const isDragging = dragItem?.fi === fi && dragItem?.di === di;
+                const isOver     = dragOver?.fi === fi && dragOver?.di === di && !isDragging;
+                return (
+                  <div
+                    key={doc.id}
+                    className="win95-file-item"
+                    draggable
+                    style={{
+                      fontSize: '0.8rem', padding: '4px 8px', cursor: 'grab',
+                      backgroundColor: isSelected ? '#000080' : 'transparent',
+                      color: isSelected ? 'white' : 'black',
+                      opacity: isDragging ? 0.35 : 1,
+                      borderTop: isOver ? '2px solid #000080' : '2px solid transparent',
+                      userSelect: 'none',
+                    }}
+                    onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
+                    onDragStart={() => setDragItem({ fi, di })}
+                    onDragEnter={() => setDragOver({ fi, di })}
+                    onDragOver={e => e.preventDefault()}
+                    onDragEnd={() => { setDragItem(null); setDragOver(null); }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      if (!dragItem || dragItem.fi !== fi || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
+                      setFolders(prev => prev.map((f, idx) => {
+                        if (idx !== fi) return f;
+                        const docs = [...f.docs];
+                        const [moved] = docs.splice(dragItem.di, 1);
+                        docs.splice(di, 0, moved);
+                        return { ...f, docs };
+                      }));
+                      // 維持選取狀態跟隨被移動的文件
+                      if (isSelected) setSelectedDocIdx(di);
+                      setDragItem(null); setDragOver(null);
+                    }}
+                  >
+                    <span style={{ marginRight: 4, opacity: 0.4, fontSize: '0.7rem' }}>⠿</span>
+                    {doc.title}
+                  </div>
+                );
+              })}
               <div
                 style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
                 onClick={() => { addDoc(fi); setSelectedFolderIdx(fi); setSelectedDocIdx(folders[fi].docs.length); setToolbarPanel(null); }}
@@ -693,40 +741,59 @@ function AdminPage() {
                   <ToolbarBtn label="🖼️ 圖片" title="插入圖片（支援上傳或 URL）" onMouseDown={(e) => captureSelection(e, 'image')} />
                   <ToolbarBtn label="🎵 音樂" title="插入音樂播放器" onMouseDown={(e) => captureSelection(e, 'audio')} />
                   <ToolbarBtn label="🎬 影片" title="插入影片播放器" onMouseDown={(e) => captureSelection(e, 'video')} />
-                  <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#777' }}>
-                    支援 Markdown：<code style={{ fontSize: '0.72rem', backgroundColor: '#fff', padding: '0 3px' }}># 標題</code>
-                    {' '}<code style={{ fontSize: '0.72rem', backgroundColor: '#fff', padding: '0 3px' }}>**粗體**</code>
-                  </span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                    <button
+                      className="win95-button"
+                      style={{ padding: '2px 8px', fontSize: '0.82rem', backgroundColor: showPreview ? '#000080' : undefined, color: showPreview ? '#fff' : undefined }}
+                      onMouseDown={e => { e.preventDefault(); setShowPreview(v => !v); }}
+                      title="切換即時預覽">
+                      {showPreview ? '✏️ 編輯' : '👁 預覽'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* 插入面板 */}
                 {toolbarPanel && (
-                  <InsertPanel
-                    type={toolbarPanel}
-                    pat={pat}
-                    onInsert={handleInsert}
-                    onClose={() => setToolbarPanel(null)}
-                  />
+                  <InsertPanel type={toolbarPanel} pat={pat} onInsert={handleInsert} onClose={() => setToolbarPanel(null)} />
                 )}
 
-                {/* Textarea */}
-                <textarea
-                  ref={textareaRef}
-                  style={{
-                    flexGrow: 1, width: '100%', boxSizing: 'border-box',
-                    fontFamily: "'DotGothic16', 'Courier New', monospace",
-                    fontSize: '0.95rem', padding: 10,
-                    border: '2px inset #808080', resize: 'none',
-                    lineHeight: 1.8, minHeight: 280,
-                  }}
-                  value={currentDoc.content || ''}
-                  onChange={(e) => updateDocField(selectedFolderIdx, selectedDocIdx, 'content', e.target.value)}
-                />
+                {/* 編輯 + 預覽 分割區 */}
+                <div style={{ flexGrow: 1, display: 'flex', gap: showPreview ? 8 : 0, minHeight: 280 }}>
+                  {/* Textarea */}
+                  <textarea
+                    ref={textareaRef}
+                    style={{
+                      flex: showPreview ? '1 1 50%' : '1 1 100%',
+                      boxSizing: 'border-box',
+                      fontFamily: "'DotGothic16', 'Courier New', monospace",
+                      fontSize: '0.95rem', padding: 10,
+                      border: '2px inset #808080', resize: 'none',
+                      lineHeight: 1.8,
+                    }}
+                    value={currentDoc.content || ''}
+                    onChange={(e) => updateDocField(selectedFolderIdx, selectedDocIdx, 'content', e.target.value)}
+                  />
+
+                  {/* 即時預覽面板 */}
+                  {showPreview && (
+                    <div style={{
+                      flex: '1 1 50%', border: '2px inset #808080', backgroundColor: 'white',
+                      padding: 10, overflowY: 'auto', boxSizing: 'border-box',
+                    }}>
+                      <div style={{ fontSize: '0.72rem', color: '#aaa', marginBottom: 6, borderBottom: '1px dashed #ddd', paddingBottom: 4 }}>
+                        👁 即時預覽
+                      </div>
+                      <div className="md-content" style={{ fontSize: '0.9rem' }}>
+                        {renderMarkdown(currentDoc.content || '', (src, alt) => setPreviewLightbox({ src, alt }))}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Markdown 語法提示 */}
                 <div style={{ fontSize: '0.72rem', color: '#666', padding: '3px 4px', backgroundColor: '#d4d0c8', borderTop: '1px solid #808080' }}>
                   <strong>提示：</strong>
-                  {' '}[連結文字](url)　![圖片說明](url)　[audio:標題](url)　[video:標題](url)　# 大標　## 次標　**粗體**　--- 分隔線
+                  {' '}[連結文字](url)　![圖片說明](url)　[audio:標題](url)　[video:標題](url)　# 標題　**粗體**　--- 分隔線　- [ ] 打勾項目
                 </div>
               </div>
 
@@ -752,6 +819,11 @@ function AdminPage() {
           onMembers={() => setActiveTab('members')}
         />
       </div>
+
+      {/* 預覽區 Lightbox */}
+      {previewLightbox && (
+        <Lightbox src={previewLightbox.src} alt={previewLightbox.alt} onClose={() => setPreviewLightbox(null)} />
+      )}
     </main>
   );
 }
