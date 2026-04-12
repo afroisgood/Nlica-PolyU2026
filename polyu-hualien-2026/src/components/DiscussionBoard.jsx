@@ -20,8 +20,6 @@ const EMOJI_LIST = [
   '📸','🎵','💡','🗺️','🧭','✅','⚠️','💬','🔔','🎯',
 ];
 
-const IMG_URL_RE = /^https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i;
-
 function getTodayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -32,66 +30,14 @@ function formatTime(ts) {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-/** 渲染留言內容（支援圖片語法 + 純圖片 URL） */
-function MsgContent({ text, onImgClick }) {
-  if (!text) return null;
-  return (
-    <>
-      {text.split('\n').map((line, i) => {
-        const mdImg = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-        if (mdImg) return (
-          <img key={i} src={mdImg[2]} alt={mdImg[1]} className="disc-msg-img"
-            onClick={() => onImgClick?.(mdImg[2], mdImg[1])}
-            onError={e => { e.target.style.display='none'; }} />
-        );
-        if (IMG_URL_RE.test(line.trim())) return (
-          <img key={i} src={line.trim()} alt="圖片" className="disc-msg-img"
-            onClick={() => onImgClick?.(line.trim(), '')}
-            onError={e => { e.target.style.display='none'; }} />
-        );
-        return line
-          ? <span key={i} style={{ display:'block', whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{line}</span>
-          : <br key={i} />;
-      })}
-    </>
-  );
-}
-
-/** 圖片放大 lightbox */
-function MsgLightbox({ src, alt, onClose }) {
-  useEffect(() => {
-    const h = e => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [onClose]);
-  return (
-    <div className="lightbox-overlay" onClick={onClose}>
-      <div style={{ position:'relative', background:'#c0c0c0', border:'2px solid #000080', maxWidth:'90vw' }}
-        onClick={e => e.stopPropagation()}>
-        <div className="win95-title-bar" style={{ cursor:'default' }}>
-          <span>🖼️ {alt || '圖片'}</span>
-          <div className="win95-title-buttons"><div className="win95-btn" onClick={onClose}>X</div></div>
-        </div>
-        <div style={{ padding:8, background:'#000' }}>
-          <img src={src} alt={alt}
-            style={{ maxWidth:'80vw', maxHeight:'75vh', display:'block', objectFit:'contain' }} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DiscussionBoard({ playerData, isGuest, onBack }) {
   const todayKey   = getTodayKey();
   const defaultDay = DISCUSSION_DAYS.find(d => d.key === todayKey)?.key || DISCUSSION_DAYS[0].key;
-  const [selectedDay, setSelectedDay]     = useState(defaultDay);
-  const [messages, setMessages]           = useState([]);
-  const [text, setText]                   = useState('');
-  const [sending, setSending]             = useState(false);
-  const [showEmoji, setShowEmoji]         = useState(false);
-  const [showImgInput, setShowImgInput]   = useState(false);
-  const [imgUrl, setImgUrl]               = useState('');
-  const [lightbox, setLightbox]           = useState(null);
+  const [selectedDay, setSelectedDay] = useState(defaultDay);
+  const [messages, setMessages]       = useState([]);
+  const [text, setText]               = useState('');
+  const [sending, setSending]         = useState(false);
+  const [showEmoji, setShowEmoji]     = useState(false);
   const bottomRef = useRef(null);
   const textRef   = useRef(null);
 
@@ -118,10 +64,9 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
       name: playerData.name, group: playerData.group,
       text: text.trim(), timestamp: serverTimestamp(),
     });
-    setText(''); setSending(false); setShowEmoji(false); setShowImgInput(false);
+    setText(''); setSending(false); setShowEmoji(false);
   };
 
-  /** 插入 emoji 到游標位置 */
   const insertEmoji = emoji => {
     const el = textRef.current;
     if (!el) { setText(t => t + emoji); setShowEmoji(false); return; }
@@ -130,13 +75,6 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     setText(newText);
     setShowEmoji(false);
     setTimeout(() => { el.focus(); el.setSelectionRange(s + emoji.length, s + emoji.length); }, 0);
-  };
-
-  /** 插入圖片語法 */
-  const insertImage = () => {
-    if (!imgUrl.trim()) return;
-    setText(t => t + (t && !t.endsWith('\n') ? '\n' : '') + `![圖片](${imgUrl.trim()})\n`);
-    setImgUrl(''); setShowImgInput(false);
   };
 
   const selectedLabel = DISCUSSION_DAYS.find(d => d.key === selectedDay)?.label || selectedDay;
@@ -174,8 +112,8 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
                   <span style={{ fontSize:'0.75rem', color:'#666' }}>{msg.group?.split('｜')[1] || ''}</span>
                   <span style={{ fontSize:'0.75rem', color:'#aaa', marginLeft:'auto' }}>{formatTime(msg.timestamp)}</span>
                 </div>
-                <div style={{ fontSize:'0.95rem', lineHeight:1.6 }}>
-                  <MsgContent text={msg.text} onImgClick={(src, alt) => setLightbox({ src, alt })} />
+                <div style={{ fontSize:'0.95rem', lineHeight:1.6, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>
+                  {msg.text}
                 </div>
               </div>
             </div>
@@ -193,22 +131,6 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
         ) : (
           <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
 
-            {/* 圖片 URL 輸入面板 */}
-            {showImgInput && (
-              <div style={{ display:'flex', gap:6, alignItems:'center', padding:'4px 6px',
-                background:'#e8e8e8', border:'1px solid #808080' }}>
-                <span style={{ fontSize:'0.8rem', flexShrink:0 }}>🖼️ 圖片網址：</span>
-                <input className="win95-input" style={{ flex:1, fontSize:'0.85rem' }}
-                  placeholder="https://..." value={imgUrl}
-                  onChange={e => setImgUrl(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && insertImage()} />
-                <button className="win95-button" style={{ padding:'2px 8px', fontSize:'0.8rem' }}
-                  onClick={insertImage} disabled={!imgUrl.trim()}>插入</button>
-                <button className="win95-button" style={{ padding:'2px 6px', fontSize:'0.8rem' }}
-                  onClick={() => setShowImgInput(false)}>✕</button>
-              </div>
-            )}
-
             {/* Emoji 選擇器 */}
             {showEmoji && (
               <div className="disc-emoji-picker">
@@ -220,22 +142,14 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
 
             {/* 輸入列 */}
             <div style={{ display:'flex', gap:6 }}>
-              <div style={{ display:'flex', flexDirection:'column', gap:3, justifyContent:'flex-end' }}>
-                <button className="win95-button"
-                  style={{ padding:'3px 8px', fontSize:'1rem',
-                    background: showEmoji ? '#000080' : undefined,
-                    color: showEmoji ? '#fff' : undefined }}
-                  title="插入 Emoji" onClick={() => { setShowEmoji(v => !v); setShowImgInput(false); }}>
-                  😊
-                </button>
-                <button className="win95-button"
-                  style={{ padding:'3px 8px', fontSize:'0.9rem',
-                    background: showImgInput ? '#000080' : undefined,
-                    color: showImgInput ? '#fff' : undefined }}
-                  title="插入圖片" onClick={() => { setShowImgInput(v => !v); setShowEmoji(false); }}>
-                  🖼️
-                </button>
-              </div>
+              <button className="win95-button"
+                style={{ alignSelf:'flex-end', padding:'6px 10px', fontSize:'1.1rem',
+                  background: showEmoji ? '#000080' : undefined,
+                  color: showEmoji ? '#fff' : undefined }}
+                title="插入 Emoji"
+                onClick={() => setShowEmoji(v => !v)}>
+                😊
+              </button>
 
               <textarea ref={textRef} className="win95-input"
                 style={{ flexGrow:1, resize:'none', fontFamily:'inherit',
@@ -254,8 +168,6 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
           </div>
         )}
       </div>
-
-      {lightbox && <MsgLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </div>
   );
 }
