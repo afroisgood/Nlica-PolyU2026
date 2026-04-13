@@ -1,11 +1,11 @@
 // src/components/MapWindow.jsx
-// 互動地圖視窗：從 Firebase 讀取地點，使用 Google Maps JavaScript API 顯示
+// 互動地圖視窗：使用 Leaflet + OpenStreetMap（免費，無需 API Key）
 
 import { useState, useEffect, useRef } from 'react';
 import { ref as dbRef, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
-
-const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const DAY_COLORS = {
   1: '#cc0000',
@@ -17,16 +17,15 @@ const DAY_COLORS = {
   7: '#884400',
 };
 
-const HUALIEN_CENTER = { lat: 23.75, lng: 121.52 };
+const HUALIEN_CENTER = [23.75, 121.52];
 
 function MapWindow({ onClose }) {
-  const mapDivRef  = useRef(null);
-  const googleMap  = useRef(null);
-  const markers    = useRef([]);
-  const [locations, setLocations]   = useState([]);
-  const [selectedDay, setSelectedDay] = useState(0); // 0 = 全覽
-  const [popup, setPopup]           = useState(null);
-  const [mapLoaded, setMapLoaded]   = useState(false);
+  const mapDivRef = useRef(null);
+  const leafletMap = useRef(null);
+  const markerLayer = useRef(null);
+  const [locations, setLocations]     = useState([]);
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [popup, setPopup]             = useState(null);
 
   // ── 從 Firebase 讀取地點 ──────────────────────────────────────
   useEffect(() => {
@@ -41,94 +40,76 @@ function MapWindow({ onClose }) {
     });
   }, []);
 
-  // ── 載入 Google Maps JS API ───────────────────────────────────
+  // ── 初始化 Leaflet 地圖 ───────────────────────────────────────
   useEffect(() => {
-    if (!API_KEY) return;
-    if (window.google?.maps) { setMapLoaded(true); return; }
-    if (document.getElementById('gmaps-script')) {
-      // 已在載入中，等待 callback
-      window.__gmapsOnLoad = window.__gmapsOnLoad || [];
-      window.__gmapsOnLoad.push(() => setMapLoaded(true));
-      return;
-    }
-    window.__gmapsCallback = () => {
-      setMapLoaded(true);
-      (window.__gmapsOnLoad || []).forEach((fn) => fn());
-    };
-    const script = document.createElement('script');
-    script.id  = 'gmaps-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=__gmapsCallback`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
+    if (!mapDivRef.current || leafletMap.current) return;
 
-  // ── 初始化地圖 ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!mapLoaded || !mapDivRef.current || googleMap.current) return;
-    googleMap.current = new window.google.maps.Map(mapDivRef.current, {
+    leafletMap.current = L.map(mapDivRef.current, {
       center: HUALIEN_CENTER,
       zoom: 10,
-      disableDefaultUI: true,
       zoomControl: true,
-      zoomControlOptions: { position: window.google.maps.ControlPosition.RIGHT_BOTTOM },
     });
-  }, [mapLoaded]);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(leafletMap.current);
+
+    markerLayer.current = L.layerGroup().addTo(leafletMap.current);
+
+    return () => {
+      if (leafletMap.current) {
+        leafletMap.current.remove();
+        leafletMap.current = null;
+      }
+    };
+  }, []);
 
   // ── 更新標記 ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!googleMap.current || !mapLoaded) return;
+    if (!markerLayer.current) return;
 
-    // 清除舊標記
-    markers.current.forEach((m) => m.setMap(null));
-    markers.current = [];
+    markerLayer.current.clearLayers();
 
     const filtered = selectedDay === 0
       ? locations
       : locations.filter((l) => l.day === selectedDay);
 
+    const latLngs = [];
+
     filtered.forEach((loc, idx) => {
       if (!loc.lat || !loc.lng) return;
+      const lat = parseFloat(loc.lat);
+      const lng = parseFloat(loc.lng);
       const color = DAY_COLORS[loc.day] || '#cc0000';
-      const marker = new window.google.maps.Marker({
-        position: { lat: parseFloat(loc.lat), lng: parseFloat(loc.lng) },
-        map: googleMap.current,
-        title: loc.name,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 13,
-          fillColor: color,
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-        },
-        label: {
-          text: String(idx + 1),
-          color: 'white',
-          fontSize: '11px',
-          fontWeight: 'bold',
-        },
-        zIndex: idx,
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          background:${color};
+          width:28px;height:28px;border-radius:50%;
+          border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-size:11px;font-weight:bold;
+          font-family:monospace;
+        ">${idx + 1}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
       });
-      marker.addListener('click', () => {
-        setPopup(loc);
-        googleMap.current.panTo({ lat: parseFloat(loc.lat), lng: parseFloat(loc.lng) });
-      });
-      markers.current.push(marker);
+
+      const marker = L.marker([lat, lng], { icon });
+      marker.on('click', () => setPopup(loc));
+      markerLayer.current.addLayer(marker);
+      latLngs.push([lat, lng]);
     });
 
-    // 自動調整視野（篩選特定日時）
-    if (selectedDay !== 0 && filtered.length > 1) {
-      const bounds = new window.google.maps.LatLngBounds();
-      filtered.forEach((l) => {
-        if (l.lat && l.lng) bounds.extend({ lat: parseFloat(l.lat), lng: parseFloat(l.lng) });
-      });
-      googleMap.current.fitBounds(bounds, 60);
-    } else if (selectedDay === 0 && locations.length === 0) {
-      googleMap.current.setCenter(HUALIEN_CENTER);
-      googleMap.current.setZoom(10);
+    // 自動調整視野
+    if (selectedDay !== 0 && latLngs.length > 1 && leafletMap.current) {
+      leafletMap.current.fitBounds(latLngs, { padding: [40, 40] });
+    } else if (selectedDay !== 0 && latLngs.length === 1 && leafletMap.current) {
+      leafletMap.current.setView(latLngs[0], 14);
     }
-  }, [locations, selectedDay, mapLoaded]);
+  }, [locations, selectedDay]);
 
   const maxDay  = locations.length ? Math.max(...locations.map((l) => l.day || 0)) : 0;
   const days    = Array.from({ length: maxDay }, (_, i) => i + 1);
@@ -160,8 +141,8 @@ function MapWindow({ onClose }) {
         {/* 日期篩選列 */}
         <div style={{
           display: 'flex', gap: 4, padding: '6px 8px',
-          borderBottom: '1px solid #808080', backgroundColor: '#d4d0c8', flexWrap: 'wrap',
-          alignItems: 'center',
+          borderBottom: '1px solid #808080', backgroundColor: '#d4d0c8',
+          flexWrap: 'wrap', alignItems: 'center',
         }}>
           <button
             className="win95-button"
@@ -190,36 +171,16 @@ function MapWindow({ onClose }) {
         </div>
 
         {/* 地圖區域 */}
-        <div style={{ position: 'relative', height: 380, backgroundColor: '#c8d8c8', flexShrink: 0 }}>
-          {/* 未設定 API Key */}
-          {!API_KEY && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: '#555' }}>
-              <div style={{ fontSize: '2.5rem' }}>🗺️</div>
-              <div style={{ fontWeight: 'bold' }}>尚未設定 Google Maps API Key</div>
-              <div style={{ fontSize: '0.8rem', color: '#888', textAlign: 'center', maxWidth: 300 }}>
-                請在專案根目錄的 <code>.env</code> 檔案中加入：<br />
-                <code style={{ backgroundColor: '#eee', padding: '2px 6px', fontFamily: 'monospace' }}>VITE_GOOGLE_MAPS_API_KEY=你的金鑰</code>
-              </div>
-            </div>
-          )}
-
-          {/* 載入中 */}
-          {API_KEY && !mapLoaded && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#555', gap: 8 }}>
-              <span>🗺️</span> 地圖載入中...
-            </div>
-          )}
-
-          {/* Google Maps 容器 */}
-          <div
-            ref={mapDivRef}
-            style={{ width: '100%', height: '100%', visibility: mapLoaded ? 'visible' : 'hidden' }}
-          />
+        <div style={{ position: 'relative', height: 380, flexShrink: 0 }}>
+          <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
 
           {/* 地點彈出資訊卡 */}
           {popup && (
             <div
-              style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', width: 280, zIndex: 10 }}
+              style={{
+                position: 'absolute', bottom: 12, left: '50%',
+                transform: 'translateX(-50%)', width: 280, zIndex: 1000,
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="win95-window" style={{ margin: 0 }}>
@@ -266,9 +227,11 @@ function MapWindow({ onClose }) {
               }}
               onClick={() => {
                 setPopup(loc);
-                if (googleMap.current && loc.lat && loc.lng) {
-                  googleMap.current.panTo({ lat: parseFloat(loc.lat), lng: parseFloat(loc.lng) });
-                  googleMap.current.setZoom(14);
+                if (leafletMap.current && loc.lat && loc.lng) {
+                  leafletMap.current.setView(
+                    [parseFloat(loc.lat), parseFloat(loc.lng)], 14,
+                    { animate: true }
+                  );
                 }
               }}
             >
@@ -281,7 +244,10 @@ function MapWindow({ onClose }) {
               <span style={{ color: '#555', fontSize: '0.75rem', minWidth: 42 }}>Day {loc.day}</span>
               <span style={{ fontWeight: 'bold', flexShrink: 0 }}>{loc.name}</span>
               {loc.description && (
-                <span style={{ color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                <span style={{
+                  color: '#888', overflow: 'hidden', textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap', fontSize: '0.78rem',
+                }}>
                   {loc.description}
                 </span>
               )}
