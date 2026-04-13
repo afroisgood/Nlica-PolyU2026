@@ -318,7 +318,7 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
 // ── 地圖管理分頁 ──────────────────────────────────────────────────
 const PALETTE_ADMIN = ['#cc0000','#0044cc','#007700','#cc6600','#7700bb','#00888a','#884400','#555555'];
 const EMPTY_LOC = { name: '', lat: '', lng: '', categoryId: '', description: '' };
-const EMPTY_CAT = { label: '', order: 1 };
+const EMPTY_CAT = { label: '', order: 1, color: '#cc0000' };
 
 function MapTab({ onBack }) {
   const [categories, setCategories] = useState([]);
@@ -359,7 +359,7 @@ function MapTab({ onBack }) {
     if (!catForm.label.trim()) { setMsg('❌ 請填入分類名稱。'); return; }
     setSaving(true); setMsg('');
     try {
-      const payload = { label: catForm.label.trim(), order: parseInt(catForm.order, 10) || 1 };
+      const payload = { label: catForm.label.trim(), order: parseInt(catForm.order, 10) || 1, color: catForm.color || '#cc0000' };
       if (catForm.id) {
         await set(ref(db, `mapCategories/${catForm.id}`), payload);
       } else {
@@ -443,6 +443,16 @@ function MapTab({ onBack }) {
                 <input className="win95-input" type="number" min={1} style={{ width: 60 }}
                   value={catForm.order}
                   onChange={(e) => setCatForm({ ...catForm, order: e.target.value })} />
+                <label style={{ fontSize: '0.85rem' }}>顏色：</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="color" value={catForm.color || '#cc0000'}
+                    onChange={(e) => setCatForm({ ...catForm, color: e.target.value })}
+                    style={{ width: 40, height: 28, padding: 2, border: '2px inset #808080', cursor: 'pointer' }} />
+                  <span style={{
+                    padding: '2px 10px', borderRadius: 2, fontSize: '0.82rem', fontWeight: 'bold',
+                    backgroundColor: catForm.color || '#cc0000', color: '#fff',
+                  }}>{catForm.label || '預覽'}</span>
+                </div>
                 <div style={{ gridColumn: '1/-1', display: 'flex', gap: 8, alignItems: 'center' }}>
                   <button className="win95-button" onClick={handleSaveCat} disabled={saving}>{saving ? '...' : '💾 儲存'}</button>
                   <button className="win95-button" onClick={() => { setCatForm(null); setMsg(''); }}>取消</button>
@@ -454,11 +464,11 @@ function MapTab({ onBack }) {
             {/* 分類列表 */}
             <div style={{ padding: '6px 10px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {categories.length === 0 && <span style={{ fontSize: '0.82rem', color: '#666' }}>尚無分類，請先新增。</span>}
-              {categories.map((cat, idx) => (
+              {categories.map((cat) => (
                 <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{
                     padding: '2px 10px', borderRadius: 2, fontSize: '0.82rem', fontWeight: 'bold',
-                    backgroundColor: PALETTE_ADMIN[idx % PALETTE_ADMIN.length], color: '#fff',
+                    backgroundColor: cat.color || '#999', color: '#fff',
                   }}>{cat.label}</span>
                   <button className="win95-button" style={{ padding: '1px 6px', fontSize: '0.72rem' }}
                     onClick={() => { setCatForm({ ...cat }); setMsg(''); }}>✏️</button>
@@ -539,8 +549,7 @@ function MapTab({ onBack }) {
                   )}
                   {locations.map((loc, i) => {
                     const cat = categories.find((c) => c.id === loc.categoryId);
-                    const catIdx = cat ? categories.indexOf(cat) : -1;
-                    const color = catIdx >= 0 ? PALETTE_ADMIN[catIdx % PALETTE_ADMIN.length] : '#999';
+                    const color = cat?.color || '#999';
                     return (
                       <tr key={loc.id} style={{ backgroundColor: i % 2 === 0 ? '#f0f4ff' : 'white' }}>
                         <td style={tdS}>

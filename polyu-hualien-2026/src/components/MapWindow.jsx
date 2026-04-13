@@ -7,12 +7,11 @@ import { db } from '../lib/firebase';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const PALETTE = ['#cc0000','#0044cc','#007700','#cc6600','#7700bb','#00888a','#884400','#555555'];
 const HUALIEN_CENTER = [23.75, 121.52];
 
 function catColor(categories, categoryId) {
-  const idx = categories.findIndex((c) => c.id === categoryId);
-  return PALETTE[idx >= 0 ? idx % PALETTE.length : 0];
+  const cat = categories.find((c) => c.id === categoryId);
+  return cat?.color || '#999999';
 }
 
 function MapWindow({ onClose }) {
