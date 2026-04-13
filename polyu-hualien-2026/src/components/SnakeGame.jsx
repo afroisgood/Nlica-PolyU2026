@@ -1,7 +1,7 @@
 // src/components/SnakeGame.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const COLS = 20, ROWS = 20, CELL = 16, SPEED = 140;
+const COLS = 20, ROWS = 20, CELL = 14, SPEED = 140;
 
 function randFood(snake) {
   let p;
@@ -197,7 +197,7 @@ function SnakeGame({ onClose }) {
     >
       <div
         className="win95-window"
-        style={{ display: 'flex', flexDirection: 'column' }}
+        style={{ display: 'flex', flexDirection: 'column', width: 'fit-content', maxWidth: '96vw' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="win95-title-bar">
@@ -227,7 +227,7 @@ function SnakeGame({ onClose }) {
           ref={cvRef}
           width={COLS * CELL}
           height={ROWS * CELL}
-          style={{ display: 'block' }}
+          style={{ display: 'block', width: COLS * CELL, height: ROWS * CELL }}
         />
 
         {/* 手機方向鍵 */}
