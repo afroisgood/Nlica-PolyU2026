@@ -165,13 +165,13 @@ function MapWindow({ onClose }) {
             onClick={() => { setSelectedCat(null); setPopup(null); }}
           >全覽</button>
 
-          {categories.map((cat, idx) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               className="win95-button"
               style={{
                 fontSize: '0.8rem', padding: '2px 10px',
-                backgroundColor: selectedCat === cat.id ? (PALETTE[idx % PALETTE.length]) : undefined,
+                backgroundColor: selectedCat === cat.id ? (cat.color || '#999') : undefined,
                 color: selectedCat === cat.id ? '#fff' : undefined,
               }}
               onClick={() => { setSelectedCat(cat.id); setPopup(null); }}
