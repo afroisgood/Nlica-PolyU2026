@@ -3,7 +3,7 @@
 // 使用 GitHub Personal Access Token 直接更新 public/content.json
 
 import { useState, useEffect, useRef } from 'react';
-import { ref, onValue, remove } from 'firebase/database';
+import { ref, onValue, remove, push, set } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { fetchUsers } from '../data/fetchUsers';
 import { renderMarkdown } from '../lib/markdown.jsx';
@@ -315,6 +315,174 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
   );
 }
 
+// ── 地圖管理分頁 ──────────────────────────────────────────────────
+const DAY_COLORS_ADMIN = { 1:'#cc0000', 2:'#0044cc', 3:'#007700', 4:'#cc6600', 5:'#7700bb', 6:'#00888a', 7:'#884400' };
+
+const EMPTY_LOC = { name: '', lat: '', lng: '', day: 1, description: '' };
+
+function MapTab({ onBack }) {
+  const [locations, setLocations] = useState([]);
+  const [form, setForm]           = useState(null); // null | { ...loc } | EMPTY_LOC (新增)
+  const [saving, setSaving]       = useState(false);
+  const [msg, setMsg]             = useState('');
+
+  useEffect(() => {
+    const locRef = ref(db, 'mapLocations');
+    return onValue(locRef, (snap) => {
+      const data = snap.val();
+      if (!data) { setLocations([]); return; }
+      const list = Object.entries(data)
+        .map(([id, v]) => ({ id, ...v }))
+        .sort((a, b) => (a.day || 0) - (b.day || 0) || (a.order || 0) - (b.order || 0));
+      setLocations(list);
+    });
+  }, []);
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.lat || !form.lng) {
+      setMsg('❌ 請填入名稱、緯度、經度。');
+      return;
+    }
+    setSaving(true);
+    setMsg('');
+    try {
+      const payload = {
+        name: form.name.trim(),
+        lat: parseFloat(form.lat),
+        lng: parseFloat(form.lng),
+        day: parseInt(form.day, 10) || 1,
+        description: form.description.trim(),
+      };
+      if (form.id) {
+        await set(ref(db, `mapLocations/${form.id}`), payload);
+      } else {
+        await push(ref(db, 'mapLocations'), payload);
+      }
+      setMsg('✅ 儲存成功');
+      setForm(null);
+    } catch (e) {
+      setMsg(`❌ ${e.message}`);
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('確定刪除此地點？')) return;
+    await remove(ref(db, `mapLocations/${id}`));
+  };
+
+  const tdS = { padding: '5px 8px', borderBottom: '1px solid #ddd', fontSize: '0.82rem' };
+  const thS = { padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid #444', whiteSpace: 'nowrap' };
+
+  return (
+    <main style={{ minHeight: '100vh', backgroundColor: '#008080', padding: '12px', fontFamily: "'DotGothic16', 'Courier New', monospace" }}>
+      <div className="win95-window" style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <div className="win95-title-bar">
+          <span>🗺️ 地圖管理</span>
+          <div className="win95-title-buttons">
+            <div className="win95-btn">_</div><div className="win95-btn">□</div><div className="win95-btn">X</div>
+          </div>
+        </div>
+
+        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="win95-button" onClick={onBack}>← 返回內容管理</button>
+            <button className="win95-button" onClick={() => { setForm({ ...EMPTY_LOC }); setMsg(''); }}>＋ 新增地點</button>
+            <span style={{ fontSize: '0.8rem', color: '#555', marginLeft: 'auto' }}>共 {locations.length} 個地點</span>
+          </div>
+
+          {/* 新增 / 編輯表單 */}
+          {form && (
+            <div style={{ border: '2px solid #000080', backgroundColor: '#d4d0c8', padding: 10 }}>
+              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
+                {form.id ? '✏️ 編輯地點' : '＋ 新增地點'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '6px 8px', alignItems: 'center' }}>
+                <label>名稱：</label>
+                <input className="win95-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="例：花蓮車站" />
+
+                <label>Day：</label>
+                <input className="win95-input" type="number" min={1} max={9} style={{ width: 60 }}
+                  value={form.day} onChange={(e) => setForm({ ...form, day: e.target.value })} />
+
+                <label>緯度：</label>
+                <input className="win95-input" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} placeholder="例：23.9999（在 Google Maps 右鍵點擊可取得）" />
+
+                <label>經度：</label>
+                <input className="win95-input" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} placeholder="例：121.6014" />
+
+                <label>說明：</label>
+                <input className="win95-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="（選填）簡短描述" />
+              </div>
+              <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#555' }}>
+                💡 在 Google Maps 地圖上右鍵點擊任意位置，可直接複製座標（緯度, 經度）
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                <button className="win95-button" onClick={handleSave} disabled={saving}>{saving ? '儲存中...' : '💾 儲存'}</button>
+                <button className="win95-button" onClick={() => { setForm(null); setMsg(''); }}>取消</button>
+                {msg && <span style={{ fontWeight: 'bold', color: msg.startsWith('✅') ? 'green' : 'red' }}>{msg}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* 地點列表 */}
+          <div style={{ border: '2px inset #808080', backgroundColor: 'white', overflowX: 'auto', maxHeight: 460, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0 }}>
+                <tr style={{ backgroundColor: '#000080', color: 'white' }}>
+                  <th style={thS}>Day</th>
+                  <th style={thS}>名稱</th>
+                  <th style={thS}>緯度</th>
+                  <th style={thS}>經度</th>
+                  <th style={thS}>說明</th>
+                  <th style={thS}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {locations.length === 0 && (
+                  <tr><td colSpan={6} style={{ ...tdS, textAlign: 'center', color: '#888' }}>尚無地點資料</td></tr>
+                )}
+                {locations.map((loc, i) => (
+                  <tr key={loc.id} style={{ backgroundColor: i % 2 === 0 ? '#f0f4ff' : 'white' }}>
+                    <td style={tdS}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 22, height: 22, borderRadius: '50%', fontSize: '0.72rem',
+                        fontWeight: 'bold', color: '#fff',
+                        backgroundColor: DAY_COLORS_ADMIN[loc.day] || '#999',
+                      }}>D{loc.day}</span>
+                    </td>
+                    <td style={{ ...tdS, fontWeight: 'bold' }}>{loc.name}</td>
+                    <td style={{ ...tdS, fontFamily: 'monospace' }}>{parseFloat(loc.lat).toFixed(5)}</td>
+                    <td style={{ ...tdS, fontFamily: 'monospace' }}>{parseFloat(loc.lng).toFixed(5)}</td>
+                    <td style={{ ...tdS, color: '#555', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.description || '—'}</td>
+                    <td style={tdS}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="win95-button" style={{ padding: '1px 8px', fontSize: '0.78rem' }}
+                          onClick={() => { setForm({ ...loc }); setMsg(''); }}>✏️</button>
+                        <button className="win95-button" style={{ padding: '1px 8px', fontSize: '0.78rem', color: 'red' }}
+                          onClick={() => handleDelete(loc.id)}>🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <StatusBarMini
+          onLogout={null}
+          onBack={onBack}
+          onDiscussion={null}
+          onMembers={null}
+          onMap={null}
+        />
+      </div>
+    </main>
+  );
+}
+
 // ── 主元件 ────────────────────────────────────────────────────────
 function AdminPage() {
   const [pat, setPat] = useState(sessionStorage.getItem('admin_pat') || '');
@@ -586,10 +754,15 @@ function AdminPage() {
               </div>
             )}
           </div>
-          <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} />
+          <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} onMap={() => setActiveTab('map')} />
         </div>
       </main>
     );
+  }
+
+  // ── 地圖管理 ────────────────────────────────────────────────────
+  if (activeTab === 'map') {
+    return <MapTab onBack={() => setActiveTab('content')} />;
   }
 
   // ── 討論區管理 ──────────────────────────────────────────────────
@@ -635,7 +808,7 @@ function AdminPage() {
               ))}
             </div>
           </div>
-          <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} />
+          <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} onMap={() => setActiveTab('map')} />
         </div>
       </main>
     );
@@ -817,6 +990,7 @@ function AdminPage() {
           onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }}
           onDiscussion={() => setActiveTab('discussion')}
           onMembers={() => setActiveTab('members')}
+          onMap={() => setActiveTab('map')}
         />
       </div>
 
@@ -828,14 +1002,15 @@ function AdminPage() {
   );
 }
 
-function StatusBarMini({ onLogout, onDiscussion, onMembers }) {
+function StatusBarMini({ onLogout, onDiscussion, onMembers, onMap }) {
   const linkStyle = { background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', color: '#000080', textDecoration: 'underline' };
   return (
-    <div style={{ borderTop: '2px solid #808080', padding: '3px 8px', display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', backgroundColor: '#c0c0c0' }}>
+    <div style={{ borderTop: '2px solid #808080', padding: '3px 8px', display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', backgroundColor: '#c0c0c0', flexWrap: 'wrap' }}>
       <span style={{ flexGrow: 1 }}>已連線 GitHub：{GITHUB_OWNER}/{GITHUB_REPO}</span>
       {onMembers && <button style={linkStyle} onClick={onMembers}>👥 成員名單</button>}
       {onDiscussion && <button style={linkStyle} onClick={onDiscussion}>💬 討論區管理</button>}
-      <button style={linkStyle} onClick={onLogout}>登出</button>
+      {onMap && <button style={linkStyle} onClick={onMap}>🗺️ 地圖管理</button>}
+      {onLogout && <button style={linkStyle} onClick={onLogout}>登出</button>}
     </div>
   );
 }

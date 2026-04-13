@@ -10,6 +10,7 @@ import BootScreen from './components/BootScreen';
 import StatusBar from './components/StatusBar';
 import AdminPage from './components/AdminPage';
 import DiscussionBoard from './components/DiscussionBoard';
+import MapWindow from './components/MapWindow';
 import NotificationBalloon from './components/NotificationBalloon';
 import ContextMenu from './components/ContextMenu';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
@@ -45,6 +46,7 @@ function App() {
   const [currentFolderKey, setCurrentFolderKey] = useState(null);
   const [currentDoc, setCurrentDoc] = useState(null);
   const [showDiscussion, setShowDiscussion] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showAbout, setShowAbout] = useState(false);
   const [menuPos, setMenuPos] = useState(null); // { x, y }
@@ -285,6 +287,7 @@ function App() {
                   folders={visibleFolders}
                   onOpenFolder={setCurrentFolderKey}
                   onOpenDiscussion={() => setShowDiscussion(true)}
+                  onOpenMap={() => setShowMap(true)}
                   onLogout={handleLogout}
                   onAbout={() => setShowAbout(true)}
                 />
@@ -307,6 +310,9 @@ function App() {
 
       {/* 通知氣球 */}
       <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
+
+      {/* 互動地圖 */}
+      {showMap && <MapWindow onClose={() => setShowMap(false)} />}
 
       {/* 全域右鍵 / 長按選單 */}
       {menuPos && (
