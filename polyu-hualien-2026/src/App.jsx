@@ -166,6 +166,11 @@ function App() {
         setContentFolders(folders);
       })
       .catch((err) => setFetchError(err.message));
+
+    // 主要資料載完後，在閒置時背景預載 AdminPage chunk，
+    // 讓管理者第一次進入登入頁時不需等待網路下載
+    const t = setTimeout(() => { import('./components/AdminPage'); }, 1500);
+    return () => clearTimeout(t);
   }, [isBooting]);
 
   // ── 右鍵 / 長按選單 ────────────────────────────────────────────
