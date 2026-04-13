@@ -601,6 +601,7 @@ function AdminPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState(DISCUSSION_DAYS[0].key);
   const [discussionMsgs, setDiscussionMsgs] = useState([]);
+  const [checkedMsgs, setCheckedMsgs] = useState(new Set());
 
   // 工具列狀態
   const [toolbarPanel, setToolbarPanel] = useState(null); // null | 'link' | 'image' | 'audio' | 'video'
@@ -672,6 +673,29 @@ function AdminPage() {
   const handleDeleteMsg = async (msgId) => {
     if (!window.confirm('確定刪除這則留言？')) return;
     await remove(ref(db, `discussions/${selectedDay}/${msgId}`));
+  };
+
+  const handleDeleteChecked = async () => {
+    if (checkedMsgs.size === 0) return;
+    if (!window.confirm(`確定刪除選取的 ${checkedMsgs.size} 則留言？`)) return;
+    await Promise.all([...checkedMsgs].map((id) => remove(ref(db, `discussions/${selectedDay}/${id}`))));
+    setCheckedMsgs(new Set());
+  };
+
+  const toggleCheck = (id) => {
+    setCheckedMsgs((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleCheckAll = () => {
+    if (checkedMsgs.size === discussionMsgs.length) {
+      setCheckedMsgs(new Set());
+    } else {
+      setCheckedMsgs(new Set(discussionMsgs.map((m) => m.id)));
+    }
   };
 
   const handleSave = async () => {
@@ -879,35 +903,78 @@ function AdminPage() {
             </div>
           </div>
           <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* 工具列 */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <button className="win95-button" onClick={() => setActiveTab('content')}>← 返回內容管理</button>
               <select
                 className="win95-input"
                 value={selectedDay}
-                onChange={(e) => setSelectedDay(e.target.value)}
+                onChange={(e) => { setSelectedDay(e.target.value); setCheckedMsgs(new Set()); }}
                 style={{ fontSize: '0.9rem', padding: '2px 6px' }}
               >
                 {DISCUSSION_DAYS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
               </select>
               <span style={{ fontSize: '0.85rem', color: '#555' }}>{discussionMsgs.length} 則留言</span>
+              {checkedMsgs.size > 0 && (
+                <button
+                  className="win95-button"
+                  style={{ color: 'red', fontWeight: 'bold', marginLeft: 'auto' }}
+                  onClick={handleDeleteChecked}
+                >
+                  🗑 刪除選取（{checkedMsgs.size}）
+                </button>
+              )}
             </div>
+
+            {/* 全選列 */}
+            {discussionMsgs.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 8px', fontSize: '0.82rem', color: '#555' }}>
+                <input
+                  type="checkbox"
+                  checked={checkedMsgs.size === discussionMsgs.length && discussionMsgs.length > 0}
+                  onChange={toggleCheckAll}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span>全選 / 取消全選</span>
+              </div>
+            )}
+
+            {/* 留言列表 */}
             <div style={{ border: '2px inset #808080', backgroundColor: 'white', padding: 8, minHeight: 300, maxHeight: 500, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {discussionMsgs.length === 0 && <p style={{ color: '#888', margin: 'auto' }}>此日尚無留言</p>}
-              {discussionMsgs.map((msg) => (
-                <div key={msg.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 8px', border: '1px solid #ddd', backgroundColor: '#f9f9f9' }}>
-                  <div style={{ flexGrow: 1 }}>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 2, fontSize: '0.85rem' }}>
-                      <strong>{msg.name}</strong>
-                      <span style={{ color: '#666' }}>{msg.group}</span>
-                      <span style={{ color: '#aaa', marginLeft: 'auto' }}>
-                        {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
+              {discussionMsgs.map((msg) => {
+                const checked = checkedMsgs.has(msg.id);
+                return (
+                  <div
+                    key={msg.id}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 8px', border: `1px solid ${checked ? '#0044cc' : '#ddd'}`, backgroundColor: checked ? '#e8eeff' : '#f9f9f9', cursor: 'pointer' }}
+                    onClick={() => toggleCheck(msg.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleCheck(msg.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ marginTop: 3, flexShrink: 0, cursor: 'pointer' }}
+                    />
+                    <div style={{ flexGrow: 1 }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 2, fontSize: '0.85rem' }}>
+                        <strong>{msg.name}</strong>
+                        <span style={{ color: '#666' }}>{msg.group}</span>
+                        <span style={{ color: '#aaa', marginLeft: 'auto' }}>
+                          {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.text}</div>
                     </div>
-                    <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.text}</div>
+                    <button
+                      className="win95-button"
+                      style={{ color: 'red', flexShrink: 0, fontSize: '0.8rem', padding: '2px 8px' }}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteMsg(msg.id); }}
+                    >🗑</button>
                   </div>
-                  <button className="win95-button" style={{ color: 'red', flexShrink: 0, fontSize: '0.8rem', padding: '2px 8px' }} onClick={() => handleDeleteMsg(msg.id)}>🗑</button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
           <StatusBarMini onLogout={() => { setIsAuthed(false); sessionStorage.removeItem('admin_pat'); }} onDiscussion={() => setActiveTab('discussion')} onMembers={() => setActiveTab('members')} onMap={() => setActiveTab('map')} />
