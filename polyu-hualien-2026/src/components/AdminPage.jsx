@@ -316,16 +316,32 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
 }
 
 // ── 地圖管理分頁 ──────────────────────────────────────────────────
-const DAY_COLORS_ADMIN = { 1:'#cc0000', 2:'#0044cc', 3:'#007700', 4:'#cc6600', 5:'#7700bb', 6:'#00888a', 7:'#884400' };
-
-const EMPTY_LOC = { name: '', lat: '', lng: '', day: 1, description: '' };
+const PALETTE_ADMIN = ['#cc0000','#0044cc','#007700','#cc6600','#7700bb','#00888a','#884400','#555555'];
+const EMPTY_LOC = { name: '', lat: '', lng: '', categoryId: '', description: '' };
+const EMPTY_CAT = { label: '', order: 1 };
 
 function MapTab({ onBack }) {
-  const [locations, setLocations] = useState([]);
-  const [form, setForm]           = useState(null); // null | { ...loc } | EMPTY_LOC (新增)
-  const [saving, setSaving]       = useState(false);
-  const [msg, setMsg]             = useState('');
+  const [categories, setCategories] = useState([]);
+  const [locations,  setLocations]  = useState([]);
+  const [locForm,  setLocForm]  = useState(null);
+  const [catForm,  setCatForm]  = useState(null);
+  const [saving,   setSaving]   = useState(false);
+  const [msg,      setMsg]      = useState('');
 
+  // 讀取分類
+  useEffect(() => {
+    const catRef = ref(db, 'mapCategories');
+    return onValue(catRef, (snap) => {
+      const data = snap.val();
+      if (!data) { setCategories([]); return; }
+      const list = Object.entries(data)
+        .map(([id, v]) => ({ id, ...v }))
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      setCategories(list);
+    });
+  }, []);
+
+  // 讀取地點
   useEffect(() => {
     const locRef = ref(db, 'mapLocations');
     return onValue(locRef, (snap) => {
@@ -333,40 +349,59 @@ function MapTab({ onBack }) {
       if (!data) { setLocations([]); return; }
       const list = Object.entries(data)
         .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => (a.day || 0) - (b.day || 0) || (a.order || 0) - (b.order || 0));
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
       setLocations(list);
     });
   }, []);
 
-  const handleSave = async () => {
-    if (!form.name.trim() || !form.lat || !form.lng) {
-      setMsg('❌ 請填入名稱、緯度、經度。');
-      return;
-    }
-    setSaving(true);
-    setMsg('');
+  // 儲存分類
+  const handleSaveCat = async () => {
+    if (!catForm.label.trim()) { setMsg('❌ 請填入分類名稱。'); return; }
+    setSaving(true); setMsg('');
     try {
-      const payload = {
-        name: form.name.trim(),
-        lat: parseFloat(form.lat),
-        lng: parseFloat(form.lng),
-        day: parseInt(form.day, 10) || 1,
-        description: form.description.trim(),
-      };
-      if (form.id) {
-        await set(ref(db, `mapLocations/${form.id}`), payload);
+      const payload = { label: catForm.label.trim(), order: parseInt(catForm.order, 10) || 1 };
+      if (catForm.id) {
+        await set(ref(db, `mapCategories/${catForm.id}`), payload);
       } else {
-        await push(ref(db, 'mapLocations'), payload);
+        await push(ref(db, 'mapCategories'), payload);
       }
-      setMsg('✅ 儲存成功');
-      setForm(null);
-    } catch (e) {
-      setMsg(`❌ ${e.message}`);
-    }
+      setMsg('✅ 分類已儲存');
+      setCatForm(null);
+    } catch (e) { setMsg(`❌ ${e.message}`); }
     setSaving(false);
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteCat = async (id) => {
+    if (!window.confirm('確定刪除此分類？（地點不會被刪除，但會失去分類標籤）')) return;
+    await remove(ref(db, `mapCategories/${id}`));
+  };
+
+  // 儲存地點
+  const handleSaveLoc = async () => {
+    if (!locForm.name.trim() || !locForm.lat || !locForm.lng) {
+      setMsg('❌ 請填入名稱、緯度、經度。'); return;
+    }
+    setSaving(true); setMsg('');
+    try {
+      const payload = {
+        name: locForm.name.trim(),
+        lat: parseFloat(locForm.lat),
+        lng: parseFloat(locForm.lng),
+        categoryId: locForm.categoryId || '',
+        description: locForm.description.trim(),
+      };
+      if (locForm.id) {
+        await set(ref(db, `mapLocations/${locForm.id}`), payload);
+      } else {
+        await push(ref(db, 'mapLocations'), payload);
+      }
+      setMsg('✅ 地點已儲存');
+      setLocForm(null);
+    } catch (e) { setMsg(`❌ ${e.message}`); }
+    setSaving(false);
+  };
+
+  const handleDeleteLoc = async (id) => {
     if (!window.confirm('確定刪除此地點？')) return;
     await remove(ref(db, `mapLocations/${id}`));
   };
@@ -376,7 +411,7 @@ function MapTab({ onBack }) {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#008080', padding: '12px', fontFamily: "'DotGothic16', 'Courier New', monospace" }}>
-      <div className="win95-window" style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div className="win95-window" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
         <div className="win95-title-bar">
           <span>🗺️ 地圖管理</span>
           <div className="win95-title-buttons">
@@ -384,100 +419,158 @@ function MapTab({ onBack }) {
           </div>
         </div>
 
-        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <button className="win95-button" onClick={onBack}>← 返回內容管理</button>
-            <button className="win95-button" onClick={() => { setForm({ ...EMPTY_LOC }); setMsg(''); }}>＋ 新增地點</button>
-            <span style={{ fontSize: '0.8rem', color: '#555', marginLeft: 'auto' }}>共 {locations.length} 個地點</span>
+        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <button className="win95-button" style={{ alignSelf: 'flex-start' }} onClick={onBack}>← 返回內容管理</button>
+
+          {/* ── 分類管理 ── */}
+          <div style={{ border: '2px solid #808080', backgroundColor: '#d4d0c8' }}>
+            <div style={{ backgroundColor: '#000080', color: '#fff', padding: '4px 10px', fontWeight: 'bold', fontSize: '0.88rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>分類標籤管理</span>
+              <button className="win95-button" style={{ fontSize: '0.78rem', padding: '1px 8px', color: '#000' }}
+                onClick={() => { setCatForm({ ...EMPTY_CAT, order: categories.length + 1 }); setMsg(''); }}>
+                ＋ 新增分類
+              </button>
+            </div>
+
+            {/* 分類表單 */}
+            {catForm && (
+              <div style={{ padding: '8px 10px', borderBottom: '1px solid #808080', display: 'grid', gridTemplateColumns: '70px 1fr', gap: '6px 8px', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.85rem' }}>標籤名稱：</label>
+                <input className="win95-input" value={catForm.label}
+                  onChange={(e) => setCatForm({ ...catForm, label: e.target.value })}
+                  placeholder="例：Day 1 — 5/18 相見歡" />
+                <label style={{ fontSize: '0.85rem' }}>順序：</label>
+                <input className="win95-input" type="number" min={1} style={{ width: 60 }}
+                  value={catForm.order}
+                  onChange={(e) => setCatForm({ ...catForm, order: e.target.value })} />
+                <div style={{ gridColumn: '1/-1', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button className="win95-button" onClick={handleSaveCat} disabled={saving}>{saving ? '...' : '💾 儲存'}</button>
+                  <button className="win95-button" onClick={() => { setCatForm(null); setMsg(''); }}>取消</button>
+                  {msg && <span style={{ color: msg.startsWith('✅') ? 'green' : 'red', fontSize: '0.82rem' }}>{msg}</span>}
+                </div>
+              </div>
+            )}
+
+            {/* 分類列表 */}
+            <div style={{ padding: '6px 10px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {categories.length === 0 && <span style={{ fontSize: '0.82rem', color: '#666' }}>尚無分類，請先新增。</span>}
+              {categories.map((cat, idx) => (
+                <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{
+                    padding: '2px 10px', borderRadius: 2, fontSize: '0.82rem', fontWeight: 'bold',
+                    backgroundColor: PALETTE_ADMIN[idx % PALETTE_ADMIN.length], color: '#fff',
+                  }}>{cat.label}</span>
+                  <button className="win95-button" style={{ padding: '1px 6px', fontSize: '0.72rem' }}
+                    onClick={() => { setCatForm({ ...cat }); setMsg(''); }}>✏️</button>
+                  <button className="win95-button" style={{ padding: '1px 6px', fontSize: '0.72rem', color: 'red' }}
+                    onClick={() => handleDeleteCat(cat.id)}>🗑</button>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* 新增 / 編輯表單 */}
-          {form && (
-            <div style={{ border: '2px solid #000080', backgroundColor: '#d4d0c8', padding: 10 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
-                {form.id ? '✏️ 編輯地點' : '＋ 新增地點'}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '6px 8px', alignItems: 'center' }}>
-                <label>名稱：</label>
-                <input className="win95-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="例：花蓮車站" />
-
-                <label>Day：</label>
-                <input className="win95-input" type="number" min={1} max={9} style={{ width: 60 }}
-                  value={form.day} onChange={(e) => setForm({ ...form, day: e.target.value })} />
-
-                <label>緯度：</label>
-                <input className="win95-input" value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} placeholder="例：23.9999（在 Google Maps 右鍵點擊可取得）" />
-
-                <label>經度：</label>
-                <input className="win95-input" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} placeholder="例：121.6014" />
-
-                <label>說明：</label>
-                <input className="win95-input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="（選填）簡短描述" />
-              </div>
-              <div style={{ marginTop: 8, fontSize: '0.75rem', color: '#555' }}>
-                💡 在 Google Maps 地圖上右鍵點擊任意位置，可直接複製座標（緯度, 經度）
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
-                <button className="win95-button" onClick={handleSave} disabled={saving}>{saving ? '儲存中...' : '💾 儲存'}</button>
-                <button className="win95-button" onClick={() => { setForm(null); setMsg(''); }}>取消</button>
-                {msg && <span style={{ fontWeight: 'bold', color: msg.startsWith('✅') ? 'green' : 'red' }}>{msg}</span>}
-              </div>
+          {/* ── 地點管理 ── */}
+          <div style={{ border: '2px solid #808080', backgroundColor: '#d4d0c8' }}>
+            <div style={{ backgroundColor: '#000080', color: '#fff', padding: '4px 10px', fontWeight: 'bold', fontSize: '0.88rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>地點管理（共 {locations.length} 個）</span>
+              <button className="win95-button" style={{ fontSize: '0.78rem', padding: '1px 8px', color: '#000' }}
+                onClick={() => { setLocForm({ ...EMPTY_LOC }); setMsg(''); }}>
+                ＋ 新增地點
+              </button>
             </div>
-          )}
 
-          {/* 地點列表 */}
-          <div style={{ border: '2px inset #808080', backgroundColor: 'white', overflowX: 'auto', maxHeight: 460, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ position: 'sticky', top: 0 }}>
-                <tr style={{ backgroundColor: '#000080', color: 'white' }}>
-                  <th style={thS}>Day</th>
-                  <th style={thS}>名稱</th>
-                  <th style={thS}>緯度</th>
-                  <th style={thS}>經度</th>
-                  <th style={thS}>說明</th>
-                  <th style={thS}>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {locations.length === 0 && (
-                  <tr><td colSpan={6} style={{ ...tdS, textAlign: 'center', color: '#888' }}>尚無地點資料</td></tr>
-                )}
-                {locations.map((loc, i) => (
-                  <tr key={loc.id} style={{ backgroundColor: i % 2 === 0 ? '#f0f4ff' : 'white' }}>
-                    <td style={tdS}>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: 22, height: 22, borderRadius: '50%', fontSize: '0.72rem',
-                        fontWeight: 'bold', color: '#fff',
-                        backgroundColor: DAY_COLORS_ADMIN[loc.day] || '#999',
-                      }}>D{loc.day}</span>
-                    </td>
-                    <td style={{ ...tdS, fontWeight: 'bold' }}>{loc.name}</td>
-                    <td style={{ ...tdS, fontFamily: 'monospace' }}>{parseFloat(loc.lat).toFixed(5)}</td>
-                    <td style={{ ...tdS, fontFamily: 'monospace' }}>{parseFloat(loc.lng).toFixed(5)}</td>
-                    <td style={{ ...tdS, color: '#555', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.description || '—'}</td>
-                    <td style={tdS}>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="win95-button" style={{ padding: '1px 8px', fontSize: '0.78rem' }}
-                          onClick={() => { setForm({ ...loc }); setMsg(''); }}>✏️</button>
-                        <button className="win95-button" style={{ padding: '1px 8px', fontSize: '0.78rem', color: 'red' }}
-                          onClick={() => handleDelete(loc.id)}>🗑</button>
-                      </div>
-                    </td>
+            {/* 地點表單 */}
+            {locForm && (
+              <div style={{ padding: '8px 10px', borderBottom: '1px solid #808080', display: 'grid', gridTemplateColumns: '80px 1fr', gap: '6px 8px', alignItems: 'center' }}>
+                <label style={{ fontSize: '0.85rem' }}>名稱：</label>
+                <input className="win95-input" value={locForm.name}
+                  onChange={(e) => setLocForm({ ...locForm, name: e.target.value })} placeholder="例：花蓮車站" />
+
+                <label style={{ fontSize: '0.85rem' }}>分類：</label>
+                <select className="win95-input" value={locForm.categoryId}
+                  onChange={(e) => setLocForm({ ...locForm, categoryId: e.target.value })}
+                  style={{ fontSize: '0.85rem' }}>
+                  <option value="">（未分類）</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                  ))}
+                </select>
+
+                <label style={{ fontSize: '0.85rem' }}>緯度：</label>
+                <input className="win95-input" value={locForm.lat}
+                  onChange={(e) => setLocForm({ ...locForm, lat: e.target.value })}
+                  placeholder="在 Google Maps 右鍵點擊可取得" />
+
+                <label style={{ fontSize: '0.85rem' }}>經度：</label>
+                <input className="win95-input" value={locForm.lng}
+                  onChange={(e) => setLocForm({ ...locForm, lng: e.target.value })} placeholder="例：121.6014" />
+
+                <label style={{ fontSize: '0.85rem' }}>說明：</label>
+                <input className="win95-input" value={locForm.description}
+                  onChange={(e) => setLocForm({ ...locForm, description: e.target.value })} placeholder="（選填）" />
+
+                <div style={{ gridColumn: '1/-1', fontSize: '0.75rem', color: '#555' }}>
+                  💡 在 Google Maps 右鍵點擊地圖，可直接複製座標（緯度, 經度）
+                </div>
+                <div style={{ gridColumn: '1/-1', display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button className="win95-button" onClick={handleSaveLoc} disabled={saving}>{saving ? '儲存中...' : '💾 儲存'}</button>
+                  <button className="win95-button" onClick={() => { setLocForm(null); setMsg(''); }}>取消</button>
+                  {msg && <span style={{ color: msg.startsWith('✅') ? 'green' : 'red', fontSize: '0.82rem' }}>{msg}</span>}
+                </div>
+              </div>
+            )}
+
+            {/* 地點列表 */}
+            <div style={{ overflowX: 'auto', maxHeight: 360, overflowY: 'auto', backgroundColor: 'white' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ position: 'sticky', top: 0 }}>
+                  <tr style={{ backgroundColor: '#000080', color: 'white' }}>
+                    <th style={thS}>分類</th>
+                    <th style={thS}>名稱</th>
+                    <th style={thS}>緯度</th>
+                    <th style={thS}>經度</th>
+                    <th style={thS}>說明</th>
+                    <th style={thS}>操作</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {locations.length === 0 && (
+                    <tr><td colSpan={6} style={{ ...tdS, textAlign: 'center', color: '#888' }}>尚無地點資料</td></tr>
+                  )}
+                  {locations.map((loc, i) => {
+                    const cat = categories.find((c) => c.id === loc.categoryId);
+                    const catIdx = cat ? categories.indexOf(cat) : -1;
+                    const color = catIdx >= 0 ? PALETTE_ADMIN[catIdx % PALETTE_ADMIN.length] : '#999';
+                    return (
+                      <tr key={loc.id} style={{ backgroundColor: i % 2 === 0 ? '#f0f4ff' : 'white' }}>
+                        <td style={tdS}>
+                          {cat
+                            ? <span style={{ backgroundColor: color, color: '#fff', padding: '1px 6px', borderRadius: 2, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{cat.label}</span>
+                            : <span style={{ color: '#aaa', fontSize: '0.78rem' }}>未分類</span>
+                          }
+                        </td>
+                        <td style={{ ...tdS, fontWeight: 'bold' }}>{loc.name}</td>
+                        <td style={{ ...tdS, fontFamily: 'monospace' }}>{parseFloat(loc.lat).toFixed(5)}</td>
+                        <td style={{ ...tdS, fontFamily: 'monospace' }}>{parseFloat(loc.lng).toFixed(5)}</td>
+                        <td style={{ ...tdS, color: '#555', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.description || '—'}</td>
+                        <td style={tdS}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="win95-button" style={{ padding: '1px 8px', fontSize: '0.78rem' }}
+                              onClick={() => { setLocForm({ ...loc }); setMsg(''); }}>✏️</button>
+                            <button className="win95-button" style={{ padding: '1px 8px', fontSize: '0.78rem', color: 'red' }}
+                              onClick={() => handleDeleteLoc(loc.id)}>🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <StatusBarMini
-          onLogout={null}
-          onBack={onBack}
-          onDiscussion={null}
-          onMembers={null}
-          onMap={null}
-        />
+        <StatusBarMini onLogout={null} onBack={onBack} onDiscussion={null} onMembers={null} onMap={null} />
       </div>
     </main>
   );

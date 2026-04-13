@@ -7,25 +7,35 @@ import { db } from '../lib/firebase';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const DAY_COLORS = {
-  1: '#cc0000',
-  2: '#0044cc',
-  3: '#007700',
-  4: '#cc6600',
-  5: '#7700bb',
-  6: '#00888a',
-  7: '#884400',
-};
-
+const PALETTE = ['#cc0000','#0044cc','#007700','#cc6600','#7700bb','#00888a','#884400','#555555'];
 const HUALIEN_CENTER = [23.75, 121.52];
 
+function catColor(categories, categoryId) {
+  const idx = categories.findIndex((c) => c.id === categoryId);
+  return PALETTE[idx >= 0 ? idx % PALETTE.length : 0];
+}
+
 function MapWindow({ onClose }) {
-  const mapDivRef = useRef(null);
-  const leafletMap = useRef(null);
+  const mapDivRef   = useRef(null);
+  const leafletMap  = useRef(null);
   const markerLayer = useRef(null);
-  const [locations, setLocations]     = useState([]);
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [popup, setPopup]             = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [locations, setLocations]   = useState([]);
+  const [selectedCat, setSelectedCat] = useState(null); // null = 全覽
+  const [popup, setPopup]           = useState(null);
+
+  // ── 從 Firebase 讀取分類 ──────────────────────────────────────
+  useEffect(() => {
+    const catRef = dbRef(db, 'mapCategories');
+    return onValue(catRef, (snap) => {
+      const data = snap.val();
+      if (!data) { setCategories([]); return; }
+      const list = Object.entries(data)
+        .map(([id, v]) => ({ id, ...v }))
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      setCategories(list);
+    });
+  }, []);
 
   // ── 從 Firebase 讀取地點 ──────────────────────────────────────
   useEffect(() => {
@@ -35,7 +45,7 @@ function MapWindow({ onClose }) {
       if (!data) { setLocations([]); return; }
       const list = Object.entries(data)
         .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => (a.day || 0) - (b.day || 0) || (a.order || 0) - (b.order || 0));
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
       setLocations(list);
     });
   }, []);
@@ -57,10 +67,7 @@ function MapWindow({ onClose }) {
 
     markerLayer.current = L.layerGroup().addTo(leafletMap.current);
 
-    // overlay 容器渲染後強制重算地圖尺寸，修正灰色空白區域
-    setTimeout(() => {
-      leafletMap.current?.invalidateSize();
-    }, 50);
+    setTimeout(() => { leafletMap.current?.invalidateSize(); }, 50);
 
     return () => {
       if (leafletMap.current) {
@@ -76,27 +83,25 @@ function MapWindow({ onClose }) {
 
     markerLayer.current.clearLayers();
 
-    const filtered = selectedDay === 0
+    const filtered = selectedCat === null
       ? locations
-      : locations.filter((l) => l.day === selectedDay);
+      : locations.filter((l) => l.categoryId === selectedCat);
 
     const latLngs = [];
 
     filtered.forEach((loc, idx) => {
       if (!loc.lat || !loc.lng) return;
-      const lat = parseFloat(loc.lat);
-      const lng = parseFloat(loc.lng);
-      const color = DAY_COLORS[loc.day] || '#cc0000';
+      const lat   = parseFloat(loc.lat);
+      const lng   = parseFloat(loc.lng);
+      const color = catColor(categories, loc.categoryId);
 
       const icon = L.divIcon({
         className: '',
         html: `<div style="
-          background:${color};
-          width:28px;height:28px;border-radius:50%;
+          background:${color};width:28px;height:28px;border-radius:50%;
           border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);
           display:flex;align-items:center;justify-content:center;
-          color:#fff;font-size:11px;font-weight:bold;
-          font-family:monospace;
+          color:#fff;font-size:11px;font-weight:bold;font-family:monospace;
         ">${idx + 1}</div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
@@ -108,17 +113,19 @@ function MapWindow({ onClose }) {
       latLngs.push([lat, lng]);
     });
 
-    // 自動調整視野
-    if (selectedDay !== 0 && latLngs.length > 1 && leafletMap.current) {
+    if (selectedCat !== null && latLngs.length > 1 && leafletMap.current) {
       leafletMap.current.fitBounds(latLngs, { padding: [40, 40] });
-    } else if (selectedDay !== 0 && latLngs.length === 1 && leafletMap.current) {
+    } else if (selectedCat !== null && latLngs.length === 1 && leafletMap.current) {
       leafletMap.current.setView(latLngs[0], 14);
     }
-  }, [locations, selectedDay]);
+  }, [locations, categories, selectedCat]);
 
-  const maxDay  = locations.length ? Math.max(...locations.map((l) => l.day || 0)) : 0;
-  const days    = Array.from({ length: maxDay }, (_, i) => i + 1);
-  const visible = selectedDay === 0 ? locations : locations.filter((l) => l.day === selectedDay);
+  const visible = selectedCat === null
+    ? locations
+    : locations.filter((l) => l.categoryId === selectedCat);
+
+  const popupCat   = popup ? categories.find((c) => c.id === popup.categoryId) : null;
+  const popupColor = popup ? catColor(categories, popup.categoryId) : '#cc0000';
 
   return (
     <div
@@ -143,7 +150,7 @@ function MapWindow({ onClose }) {
           </div>
         </div>
 
-        {/* 日期篩選列 */}
+        {/* 分類篩選列 */}
         <div style={{
           display: 'flex', gap: 4, padding: '6px 8px',
           borderBottom: '1px solid #808080', backgroundColor: '#d4d0c8',
@@ -153,23 +160,25 @@ function MapWindow({ onClose }) {
             className="win95-button"
             style={{
               fontSize: '0.8rem', padding: '2px 10px',
-              backgroundColor: selectedDay === 0 ? '#000080' : undefined,
-              color: selectedDay === 0 ? '#fff' : undefined,
+              backgroundColor: selectedCat === null ? '#000080' : undefined,
+              color: selectedCat === null ? '#fff' : undefined,
             }}
-            onClick={() => { setSelectedDay(0); setPopup(null); }}
+            onClick={() => { setSelectedCat(null); setPopup(null); }}
           >全覽</button>
-          {days.map((d) => (
+
+          {categories.map((cat, idx) => (
             <button
-              key={d}
+              key={cat.id}
               className="win95-button"
               style={{
                 fontSize: '0.8rem', padding: '2px 10px',
-                backgroundColor: selectedDay === d ? (DAY_COLORS[d] || '#000080') : undefined,
-                color: selectedDay === d ? '#fff' : undefined,
+                backgroundColor: selectedCat === cat.id ? (PALETTE[idx % PALETTE.length]) : undefined,
+                color: selectedCat === cat.id ? '#fff' : undefined,
               }}
-              onClick={() => { setSelectedDay(d); setPopup(null); }}
-            >Day {d}</button>
+              onClick={() => { setSelectedCat(cat.id); setPopup(null); }}
+            >{cat.label}</button>
           ))}
+
           <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: '#555' }}>
             共 {visible.length} 個地點
           </span>
@@ -180,28 +189,37 @@ function MapWindow({ onClose }) {
           <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
         </div>
 
-        {/* 地點資訊卡（在地圖下方，不遮擋地圖） */}
+        {/* 地點資訊列（點擊地點後顯示） */}
         {popup && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '6px 12px', borderTop: '2px solid #808080',
-            backgroundColor: 'white', fontSize: '0.85rem',
+            backgroundColor: 'white', fontSize: '0.85rem', flexWrap: 'wrap',
           }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-              fontSize: '0.75rem', fontWeight: 'bold',
-              backgroundColor: DAY_COLORS[popup.day] || '#cc0000', color: '#fff',
-            }}>D{popup.day}</span>
+              fontSize: '0.7rem', fontWeight: 'bold',
+              backgroundColor: popupColor, color: '#fff',
+            }}>●</span>
             <strong style={{ flexShrink: 0 }}>{popup.name}</strong>
-            <span style={{ color: '#666' }}>{popup.description || ''}</span>
-            <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#999', flexShrink: 0 }}>
-              {parseFloat(popup.lat).toFixed(4)}, {parseFloat(popup.lng).toFixed(4)}
-            </span>
-            <div
-              style={{ cursor: 'pointer', fontWeight: 'bold', color: '#555', flexShrink: 0, fontSize: '0.85rem' }}
+            {popupCat && <span style={{ color: '#555', fontSize: '0.78rem' }}>{popupCat.label}</span>}
+            {popup.description && <span style={{ color: '#666' }}>{popup.description}</span>}
+            <a
+              href={`https://maps.google.com/maps?daddr=${popup.lat},${popup.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="win95-button"
+              style={{
+                fontSize: '0.78rem', padding: '2px 8px',
+                textDecoration: 'none', marginLeft: 'auto', flexShrink: 0,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >🧭 開啟導航</a>
+            <span
+              style={{ cursor: 'pointer', fontWeight: 'bold', color: '#555', flexShrink: 0 }}
               onClick={() => setPopup(null)}
-            >✕</div>
+            >✕</span>
           </div>
         )}
 
@@ -211,46 +229,54 @@ function MapWindow({ onClose }) {
             <div style={{ padding: '12px', textAlign: 'center', fontSize: '0.85rem', color: '#888' }}>
               {locations.length === 0
                 ? '尚無地點，請在後台「地圖管理」新增。'
-                : '此日無地點資料。'}
+                : '此分類無地點資料。'}
             </div>
           )}
-          {visible.map((loc, idx) => (
-            <div
-              key={loc.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '4px 10px', fontSize: '0.82rem',
-                borderBottom: '1px solid #e0e0e0', cursor: 'pointer',
-                backgroundColor: popup?.id === loc.id ? '#dde8ff' : undefined,
-              }}
-              onClick={() => {
-                setPopup(loc);
-                if (leafletMap.current && loc.lat && loc.lng) {
-                  leafletMap.current.setView(
-                    [parseFloat(loc.lat), parseFloat(loc.lng)], 14,
-                    { animate: true }
-                  );
-                }
-              }}
-            >
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 22, height: 22, borderRadius: '50%',
-                fontSize: '0.7rem', fontWeight: 'bold', flexShrink: 0,
-                backgroundColor: DAY_COLORS[loc.day] || '#cc0000', color: '#fff',
-              }}>{idx + 1}</span>
-              <span style={{ color: '#555', fontSize: '0.75rem', minWidth: 42 }}>Day {loc.day}</span>
-              <span style={{ fontWeight: 'bold', flexShrink: 0 }}>{loc.name}</span>
-              {loc.description && (
+          {visible.map((loc, idx) => {
+            const cat   = categories.find((c) => c.id === loc.categoryId);
+            const color = catColor(categories, loc.categoryId);
+            return (
+              <div
+                key={loc.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '4px 10px', fontSize: '0.82rem',
+                  borderBottom: '1px solid #e0e0e0', cursor: 'pointer',
+                  backgroundColor: popup?.id === loc.id ? '#dde8ff' : undefined,
+                }}
+                onClick={() => {
+                  setPopup(loc);
+                  if (leafletMap.current && loc.lat && loc.lng) {
+                    leafletMap.current.setView(
+                      [parseFloat(loc.lat), parseFloat(loc.lng)], 14,
+                      { animate: true }
+                    );
+                  }
+                }}
+              >
                 <span style={{
-                  color: '#888', overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap', fontSize: '0.78rem',
-                }}>
-                  {loc.description}
-                </span>
-              )}
-            </div>
-          ))}
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, borderRadius: '50%',
+                  fontSize: '0.7rem', fontWeight: 'bold', flexShrink: 0,
+                  backgroundColor: color, color: '#fff',
+                }}>{idx + 1}</span>
+                {cat && (
+                  <span style={{
+                    color: '#fff', fontSize: '0.7rem', padding: '1px 5px',
+                    backgroundColor: color, borderRadius: 2, flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                  }}>{cat.label}</span>
+                )}
+                <span style={{ fontWeight: 'bold', flexShrink: 0 }}>{loc.name}</span>
+                {loc.description && (
+                  <span style={{
+                    color: '#888', overflow: 'hidden', textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap', fontSize: '0.78rem',
+                  }}>{loc.description}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
