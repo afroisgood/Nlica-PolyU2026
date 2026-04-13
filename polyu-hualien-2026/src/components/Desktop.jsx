@@ -27,7 +27,7 @@ function Desktop({ folders, onOpenFolder, onOpenDiscussion, onOpenMap }) {
           onOpenMap();
         }}
       >
-        <div className="pixel-icon icon-map"></div>
+        <div className="pixel-icon icon-pin"></div>
         <span className="win95-icon-text">行程地圖</span>
       </div>
 

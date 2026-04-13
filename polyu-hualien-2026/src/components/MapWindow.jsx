@@ -176,41 +176,34 @@ function MapWindow({ onClose }) {
         </div>
 
         {/* 地圖區域 */}
-        <div style={{ position: 'relative', height: 380, flexShrink: 0 }}>
+        <div style={{ height: 380, flexShrink: 0 }}>
           <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
-
-          {/* 地點彈出資訊卡 */}
-          {popup && (
-            <div
-              style={{
-                position: 'absolute', bottom: 12, left: '50%',
-                transform: 'translateX(-50%)', width: 280, zIndex: 1000,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="win95-window" style={{ margin: 0 }}>
-                <div
-                  className="win95-title-bar"
-                  style={{ backgroundColor: DAY_COLORS[popup.day] || '#000080' }}
-                >
-                  <span>Day {popup.day} — {popup.name}</span>
-                  <div className="win95-title-buttons">
-                    <div className="win95-btn" onClick={() => setPopup(null)}>X</div>
-                  </div>
-                </div>
-                <div style={{ padding: '8px 12px', fontSize: '0.85rem', backgroundColor: 'white' }}>
-                  {popup.description
-                    ? <p style={{ margin: 0 }}>{popup.description}</p>
-                    : <p style={{ margin: 0, color: '#888' }}>(尚無說明)</p>
-                  }
-                  <div style={{ marginTop: 6, fontSize: '0.75rem', color: '#555' }}>
-                    📍 {parseFloat(popup.lat).toFixed(5)}, {parseFloat(popup.lng).toFixed(5)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* 地點資訊卡（在地圖下方，不遮擋地圖） */}
+        {popup && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '6px 12px', borderTop: '2px solid #808080',
+            backgroundColor: 'white', fontSize: '0.85rem',
+          }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+              fontSize: '0.75rem', fontWeight: 'bold',
+              backgroundColor: DAY_COLORS[popup.day] || '#cc0000', color: '#fff',
+            }}>D{popup.day}</span>
+            <strong style={{ flexShrink: 0 }}>{popup.name}</strong>
+            <span style={{ color: '#666' }}>{popup.description || ''}</span>
+            <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: '#999', flexShrink: 0 }}>
+              {parseFloat(popup.lat).toFixed(4)}, {parseFloat(popup.lng).toFixed(4)}
+            </span>
+            <div
+              style={{ cursor: 'pointer', fontWeight: 'bold', color: '#555', flexShrink: 0, fontSize: '0.85rem' }}
+              onClick={() => setPopup(null)}
+            >✕</div>
+          </div>
+        )}
 
         {/* 地點清單 */}
         <div style={{ maxHeight: 160, overflowY: 'auto', borderTop: '2px solid #808080' }}>
