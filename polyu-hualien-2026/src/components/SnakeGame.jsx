@@ -1,7 +1,12 @@
 // src/components/SnakeGame.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const COLS = 20, ROWS = 20, CELL = 14, SPEED = 140;
+const COLS = 20, ROWS = 20, CELL = 14;
+const SPEED_INIT = 140, SPEED_MIN = 55, SPEED_STEP = 8;
+
+function getSpeed(eaten) {
+  return Math.max(SPEED_MIN, SPEED_INIT - Math.floor(eaten / 5) * SPEED_STEP);
+}
 
 function randFood(snake) {
   let p;
@@ -12,7 +17,7 @@ function randFood(snake) {
 
 function mkGame() {
   const snake = [[10, 10], [9, 10], [8, 10]];
-  return { snake, dir: [1, 0], nextDir: [1, 0], food: randFood(snake), score: 0, status: 'idle' };
+  return { snake, dir: [1, 0], nextDir: [1, 0], food: randFood(snake), score: 0, eaten: 0, status: 'idle' };
 }
 
 const KEY_MAP = {
@@ -23,16 +28,17 @@ const KEY_MAP = {
 };
 
 function SnakeGame({ onClose }) {
-  const cvRef  = useRef(null);
-  const gRef   = useRef(mkGame());
-  const tmRef  = useRef(null);
-  const [ui, setUi] = useState({ score: 0, status: 'idle' });
+  const cvRef        = useRef(null);
+  const gRef         = useRef(mkGame());
+  const tmRef        = useRef(null);
+  const restartRef   = useRef(null); // 用於在 tick 內重啟計時器
+  const [ui, setUi]  = useState({ score: 0, status: 'idle', speed: 1 });
 
   const draw = useCallback(() => {
     const cv = cvRef.current;
     if (!cv) return;
     const ctx = cv.getContext('2d');
-    const { snake, food, status, score } = gRef.current;
+    const { snake, food, status, score, eaten } = gRef.current;
     const W = COLS * CELL, H = ROWS * CELL;
 
     // 背景
@@ -70,19 +76,19 @@ function SnakeGame({ onClose }) {
       ctx.fillStyle = '#fff';
       if (status === 'idle') {
         ctx.font = 'bold 14px monospace';
-        ctx.fillText('按 Enter / 空白鍵 開始', W / 2, H / 2);
+        ctx.fillText('點擊畫面 / Enter 開始', W / 2, H / 2);
       } else if (status === 'dead') {
         ctx.font = 'bold 20px monospace';
         ctx.fillText('GAME OVER', W / 2, H / 2 - 18);
         ctx.font = '14px monospace';
         ctx.fillText(`分數：${score}`, W / 2, H / 2 + 6);
         ctx.font = '13px monospace';
-        ctx.fillText('Enter 重新開始', W / 2, H / 2 + 26);
+        ctx.fillText('點擊畫面重新開始', W / 2, H / 2 + 26);
       } else if (status === 'paused') {
         ctx.font = 'bold 18px monospace';
         ctx.fillText('⏸ 暫停中', W / 2, H / 2 - 8);
         ctx.font = '13px monospace';
-        ctx.fillText('空白鍵繼續', W / 2, H / 2 + 14);
+        ctx.fillText('點擊畫面繼續', W / 2, H / 2 + 14);
       }
     }
   }, []);
@@ -92,86 +98,65 @@ function SnakeGame({ onClose }) {
     tmRef.current = null;
   }, []);
 
-  const runTick = useCallback(() => {
-    const g = gRef.current;
-    if (g.status !== 'running') return;
-    const [dx, dy] = g.nextDir;
-    const [hx, hy] = g.snake[0];
-    const nx = hx + dx, ny = hy + dy;
+  const startTimer = useCallback((speed) => {
+    clearInterval(tmRef.current);
+    tmRef.current = setInterval(() => {
+      const g = gRef.current;
+      if (g.status !== 'running') return;
+      const [dx, dy] = g.nextDir;
+      const [hx, hy] = g.snake[0];
+      const nx = hx + dx, ny = hy + dy;
 
-    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || g.snake.some(([x, y]) => x === nx && y === ny)) {
-      g.status = 'dead';
-      stopTimer();
-      setUi({ score: g.score, status: 'dead' });
+      if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || g.snake.some(([x, y]) => x === nx && y === ny)) {
+        g.status = 'dead';
+        clearInterval(tmRef.current);
+        setUi(u => ({ ...u, status: 'dead' }));
+        draw();
+        return;
+      }
+
+      const ate = nx === g.food[0] && ny === g.food[1];
+      g.snake = [[nx, ny], ...g.snake];
+      if (!ate) g.snake.pop();
+      g.dir = g.nextDir;
+
+      if (ate) {
+        g.eaten += 1;
+        g.score += 10;
+        g.food = randFood(g.snake);
+        const newSpeed = getSpeed(g.eaten);
+        const levelUp = g.eaten % 5 === 0;
+        setUi({ score: g.score, status: 'running', speed: Math.floor(g.eaten / 5) + 1 });
+        if (levelUp) {
+          // 在本次 tick 結束後重啟計時器（提速）
+          setTimeout(() => {
+            if (gRef.current.status === 'running') restartRef.current?.(newSpeed);
+          }, 0);
+        }
+      }
       draw();
-      return;
-    }
+    }, speed);
+  }, [draw]);
 
-    const ate = nx === g.food[0] && ny === g.food[1];
-    g.snake = [[nx, ny], ...g.snake];
-    if (!ate) g.snake.pop();
-    g.dir = g.nextDir;
-    if (ate) {
-      g.score += 10;
-      g.food = randFood(g.snake);
-      setUi({ score: g.score, status: 'running' });
-    }
-    draw();
-  }, [stopTimer, draw]);
+  // 把 startTimer 存進 ref，讓 tick 內部可以呼叫
+  useEffect(() => { restartRef.current = startTimer; }, [startTimer]);
 
   const startGame = useCallback(() => {
     stopTimer();
     gRef.current = { ...mkGame(), status: 'running' };
-    setUi({ score: 0, status: 'running' });
-    tmRef.current = setInterval(runTick, SPEED);
+    setUi({ score: 0, status: 'running', speed: 1 });
+    startTimer(SPEED_INIT);
     draw();
-  }, [stopTimer, runTick, draw]);
+  }, [stopTimer, startTimer, draw]);
 
   const resumeGame = useCallback(() => {
-    gRef.current.status = 'running';
-    setUi(u => ({ ...u, status: 'running' }));
-    tmRef.current = setInterval(runTick, SPEED);
-  }, [runTick]);
-
-  useEffect(() => { draw(); }, [draw]);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      const g = gRef.current;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        if (g.status === 'idle' || g.status === 'dead') startGame();
-        else if (g.status === 'running') {
-          g.status = 'paused';
-          stopTimer();
-          setUi(u => ({ ...u, status: 'paused' }));
-          draw();
-        } else if (g.status === 'paused') {
-          resumeGame();
-        }
-        return;
-      }
-      if (g.status !== 'running') return;
-      const nd = KEY_MAP[e.key];
-      if (!nd) return;
-      const [cx, cy] = g.dir;
-      if (nd[0] === -cx && nd[1] === -cy) return; // 不能反向
-      e.preventDefault();
-      g.nextDir = nd;
-    };
-    window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('keydown', onKey); stopTimer(); };
-  }, [startGame, resumeGame, stopTimer, draw]);
-
-  const mobileMove = (d) => {
     const g = gRef.current;
-    if (g.status !== 'running') return;
-    const [cx, cy] = g.dir;
-    if (d[0] === -cx && d[1] === -cy) return;
-    g.nextDir = d;
-  };
+    g.status = 'running';
+    setUi(u => ({ ...u, status: 'running' }));
+    startTimer(getSpeed(g.eaten));
+  }, [startTimer]);
 
-  const togglePause = () => {
+  const handleCanvasClick = useCallback(() => {
     const g = gRef.current;
     if (g.status === 'idle' || g.status === 'dead') startGame();
     else if (g.status === 'running') {
@@ -182,9 +167,39 @@ function SnakeGame({ onClose }) {
     } else if (g.status === 'paused') {
       resumeGame();
     }
+  }, [startGame, stopTimer, resumeGame, draw]);
+
+  useEffect(() => { draw(); }, [draw]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const g = gRef.current;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCanvasClick();
+        return;
+      }
+      if (g.status !== 'running') return;
+      const nd = KEY_MAP[e.key];
+      if (!nd) return;
+      const [cx, cy] = g.dir;
+      if (nd[0] === -cx && nd[1] === -cy) return;
+      e.preventDefault();
+      g.nextDir = nd;
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); stopTimer(); };
+  }, [handleCanvasClick, stopTimer]);
+
+  const mobileMove = (d) => {
+    const g = gRef.current;
+    if (g.status !== 'running') return;
+    const [cx, cy] = g.dir;
+    if (d[0] === -cx && d[1] === -cy) return;
+    g.nextDir = d;
   };
 
-  const btnStyle = { width: 38, height: 32, fontSize: '1rem', padding: 0, textAlign: 'center' };
+  const btnStyle = { width: 44, height: 34, fontSize: '1.1rem', padding: 0, textAlign: 'center' };
 
   return (
     <div style={{
@@ -215,7 +230,7 @@ function SnakeGame({ onClose }) {
         }}>
           <span>分數：<strong>{ui.score}</strong></span>
           <span style={{ fontSize: '0.75rem', color: '#666' }}>
-            {ui.status === 'running' ? '方向鍵移動｜空白鍵暫停' : ''}
+            {ui.status === 'running' ? `Lv.${ui.speed}　方向鍵移動` : ''}
           </span>
           <button className="win95-button" style={{ fontSize: '0.78rem', padding: '1px 10px' }} onClick={startGame}>
             ↺ 重新
@@ -227,10 +242,11 @@ function SnakeGame({ onClose }) {
           ref={cvRef}
           width={COLS * CELL}
           height={ROWS * CELL}
-          style={{ display: 'block', width: COLS * CELL, height: ROWS * CELL }}
+          style={{ display: 'block', width: COLS * CELL, height: ROWS * CELL, cursor: 'pointer' }}
+          onClick={handleCanvasClick}
         />
 
-        {/* 手機方向鍵 */}
+        {/* 手機方向鍵（純四方向，無中間鍵） */}
         <div style={{
           backgroundColor: '#d4d0c8', padding: '8px 0 6px',
           borderTop: '1px solid #808080',
@@ -239,13 +255,7 @@ function SnakeGame({ onClose }) {
           <button className="win95-button" style={btnStyle} onClick={() => mobileMove([0, -1])}>↑</button>
           <div style={{ display: 'flex', gap: 3 }}>
             <button className="win95-button" style={btnStyle} onClick={() => mobileMove([-1, 0])}>←</button>
-            <button
-              className="win95-button"
-              style={{ ...btnStyle, backgroundColor: ui.status === 'paused' ? '#000080' : undefined, color: ui.status === 'paused' ? '#fff' : undefined }}
-              onClick={togglePause}
-            >
-              {ui.status === 'running' ? '⏸' : '▶'}
-            </button>
+            <div style={{ width: 44 }} /> {/* 空位佔位 */}
             <button className="win95-button" style={btnStyle} onClick={() => mobileMove([1, 0])}>→</button>
           </div>
           <button className="win95-button" style={btnStyle} onClick={() => mobileMove([0, 1])}>↓</button>
