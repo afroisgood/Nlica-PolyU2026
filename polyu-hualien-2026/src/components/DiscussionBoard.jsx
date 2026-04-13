@@ -134,28 +134,24 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
             <div key={msg.id} style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
               <div style={{ width:6, flexShrink:0, alignSelf:'stretch', backgroundColor:color, borderRadius:2 }} />
               <div style={{ flexGrow:1 }}>
-                <div style={{ display:'flex', gap:8, alignItems:'baseline', marginBottom:2 }}>
+                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:2 }}>
                   <span style={{ fontWeight:'bold', fontSize:'0.9rem', color }}>{msg.name}</span>
                   <span style={{ fontSize:'0.75rem', color:'#666' }}>{msg.group?.split('｜')[1] || ''}</span>
-                  <span style={{ fontSize:'0.75rem', color:'#aaa', marginLeft:'auto' }}>{formatTime(msg.timestamp)}</span>
-                </div>
-                <div style={{ fontSize:'0.95rem', lineHeight:1.6, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>
-                  {msg.text}
-                </div>
-                <div style={{ marginTop:4 }}>
                   <button
                     className="win95-button"
                     style={{
-                      padding:'1px 10px', fontSize:'0.78rem',
+                      padding:'0px 7px', fontSize:'0.75rem', lineHeight:'1.4',
                       backgroundColor: hasLiked ? '#000080' : undefined,
                       color: hasLiked ? '#fff' : undefined,
                     }}
                     disabled={!userLikeKey}
                     title={!userLikeKey ? '請登入後才能按讚' : hasLiked ? '取消讚' : '按讚'}
                     onClick={() => handleLike(msg.id)}
-                  >
-                    👍{likeCount > 0 ? ` ${likeCount}` : ''}
-                  </button>
+                  >👍{likeCount > 0 ? ` ${likeCount}` : ''}</button>
+                  <span style={{ fontSize:'0.75rem', color:'#aaa', marginLeft:'auto' }}>{formatTime(msg.timestamp)}</span>
+                </div>
+                <div style={{ fontSize:'0.95rem', lineHeight:1.6, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>
+                  {msg.text}
                 </div>
               </div>
             </div>
