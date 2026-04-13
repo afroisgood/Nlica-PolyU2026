@@ -11,6 +11,7 @@ import StatusBar from './components/StatusBar';
 import AdminPage from './components/AdminPage';
 import DiscussionBoard from './components/DiscussionBoard';
 import MapWindow from './components/MapWindow';
+import SnakeGame from './components/SnakeGame';
 import NotificationBalloon from './components/NotificationBalloon';
 import ContextMenu from './components/ContextMenu';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
@@ -47,6 +48,7 @@ function App() {
   const [currentDoc, setCurrentDoc] = useState(null);
   const [showDiscussion, setShowDiscussion] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showSnake, setShowSnake] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showAbout, setShowAbout] = useState(false);
   const [menuPos, setMenuPos] = useState(null); // { x, y }
@@ -288,6 +290,7 @@ function App() {
                   onOpenFolder={setCurrentFolderKey}
                   onOpenDiscussion={() => setShowDiscussion(true)}
                   onOpenMap={() => setShowMap(true)}
+                  onOpenSnake={() => setShowSnake(true)}
                   onLogout={handleLogout}
                   onAbout={() => setShowAbout(true)}
                 />
@@ -313,6 +316,9 @@ function App() {
 
       {/* 互動地圖 */}
       {showMap && <MapWindow onClose={() => setShowMap(false)} />}
+
+      {/* 貪吃蛇 */}
+      {showSnake && <SnakeGame onClose={() => setShowSnake(false)} />}
 
       {/* 全域右鍵 / 長按選單 */}
       {menuPos && (

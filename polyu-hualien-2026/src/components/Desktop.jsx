@@ -1,7 +1,7 @@
 // src/components/Desktop.jsx
 import { playFolderOpen, playClick } from '../lib/sounds';
 
-function Desktop({ folders, onOpenFolder, onOpenDiscussion, onOpenMap }) {
+function Desktop({ folders, onOpenFolder, onOpenDiscussion, onOpenMap, onOpenSnake }) {
   return (
     <div className="win95-desktop">
       {folders.map((folder) => (
@@ -29,6 +29,18 @@ function Desktop({ folders, onOpenFolder, onOpenDiscussion, onOpenMap }) {
       >
         <div className="pixel-icon icon-pin"></div>
         <span className="win95-icon-text">行程地圖</span>
+      </div>
+
+      <div
+        className="win95-icon"
+        onClick={(e) => {
+          e.stopPropagation();
+          playClick();
+          onOpenSnake();
+        }}
+      >
+        <div className="pixel-icon icon-snake"></div>
+        <span className="win95-icon-text">貪吃蛇</span>
       </div>
 
       <div
