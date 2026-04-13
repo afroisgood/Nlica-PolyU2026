@@ -57,6 +57,11 @@ function MapWindow({ onClose }) {
 
     markerLayer.current = L.layerGroup().addTo(leafletMap.current);
 
+    // overlay 容器渲染後強制重算地圖尺寸，修正灰色空白區域
+    setTimeout(() => {
+      leafletMap.current?.invalidateSize();
+    }, 50);
+
     return () => {
       if (leafletMap.current) {
         leafletMap.current.remove();
