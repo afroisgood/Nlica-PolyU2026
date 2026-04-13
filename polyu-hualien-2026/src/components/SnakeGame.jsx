@@ -1,5 +1,7 @@
 // src/components/SnakeGame.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { ref as dbRef, onValue, set, get } from 'firebase/database';
+import { db } from '../lib/firebase';
 
 const COLS = 20, ROWS = 20, CELL = 14;
 const SPEED_INIT = 140, SPEED_MIN = 55, SPEED_STEP = 8;
@@ -27,37 +29,64 @@ const KEY_MAP = {
   ArrowRight: [1, 0], d: [1, 0],
 };
 
-function SnakeGame({ onClose }) {
+function SnakeGame({ onClose, playerData, isGuest }) {
   const cvRef        = useRef(null);
   const gRef         = useRef(mkGame());
   const tmRef        = useRef(null);
-  const restartRef   = useRef(null); // 用於在 tick 內重啟計時器
+  const restartRef   = useRef(null);
   const [ui, setUi]  = useState({ score: 0, status: 'idle', speed: 1 });
+  const [scores, setScores] = useState([]); // 排行榜資料
+
+  // 讀取排行榜
+  useEffect(() => {
+    const r = dbRef(db, 'snakeScores');
+    return onValue(r, (snap) => {
+      const data = snap.val();
+      if (!data) { setScores([]); return; }
+      const list = Object.entries(data)
+        .map(([key, v]) => ({ key, ...v }))
+        .sort((a, b) => b.score - a.score);
+      setScores(list);
+    });
+  }, []);
+
+  // 儲存分數（只在登入且比現有高分時更新）
+  const saveScore = useCallback(async (finalScore) => {
+    if (!playerData || isGuest || finalScore <= 0) return;
+    const key = playerData.name.replace(/[.#$[\]/]/g, '_');
+    const r = dbRef(db, `snakeScores/${key}`);
+    const snap = await get(r);
+    const existing = snap.val();
+    if (!existing || finalScore > existing.score) {
+      await set(r, {
+        name:      playerData.name,
+        group:     playerData.group || '',
+        score:     finalScore,
+        updatedAt: Date.now(),
+      });
+    }
+  }, [playerData, isGuest]);
 
   const draw = useCallback(() => {
     const cv = cvRef.current;
     if (!cv) return;
     const ctx = cv.getContext('2d');
-    const { snake, food, status, score, eaten } = gRef.current;
+    const { snake, food, status, score } = gRef.current;
     const W = COLS * CELL, H = ROWS * CELL;
 
-    // 背景
     ctx.fillStyle = '#1a5c1a';
     ctx.fillRect(0, 0, W, H);
 
-    // 格線
     ctx.strokeStyle = 'rgba(0,0,0,0.18)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= COLS; i++) { ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, H); ctx.stroke(); }
     for (let i = 0; i <= ROWS; i++) { ctx.beginPath(); ctx.moveTo(0, i * CELL); ctx.lineTo(W, i * CELL); ctx.stroke(); }
 
-    // 食物（紅色圓點）
     ctx.fillStyle = '#ff2222';
     ctx.beginPath();
     ctx.arc(food[0] * CELL + CELL / 2, food[1] * CELL + CELL / 2, CELL / 2 - 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // 蛇身
     snake.forEach(([x, y], i) => {
       ctx.fillStyle = i === 0 ? '#ffee00' : (i % 2 === 0 ? '#44dd44' : '#33cc33');
       ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
@@ -68,7 +97,6 @@ function SnakeGame({ onClose }) {
       }
     });
 
-    // 覆蓋遮罩
     if (status !== 'running') {
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(0, 0, W, H);
@@ -79,11 +107,9 @@ function SnakeGame({ onClose }) {
         ctx.fillText('點擊畫面 / Enter 開始', W / 2, H / 2);
       } else if (status === 'dead') {
         ctx.font = 'bold 20px monospace';
-        ctx.fillText('GAME OVER', W / 2, H / 2 - 18);
+        ctx.fillText('GAME OVER', W / 2, H / 2 - 10);
         ctx.font = '14px monospace';
-        ctx.fillText(`分數：${score}`, W / 2, H / 2 + 6);
-        ctx.font = '13px monospace';
-        ctx.fillText('點擊畫面重新開始', W / 2, H / 2 + 26);
+        ctx.fillText(`分數：${score}`, W / 2, H / 2 + 12);
       } else if (status === 'paused') {
         ctx.font = 'bold 18px monospace';
         ctx.fillText('⏸ 暫停中', W / 2, H / 2 - 8);
@@ -110,8 +136,10 @@ function SnakeGame({ onClose }) {
       if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS || g.snake.some(([x, y]) => x === nx && y === ny)) {
         g.status = 'dead';
         clearInterval(tmRef.current);
+        const finalScore = g.score;
         setUi(u => ({ ...u, status: 'dead' }));
         draw();
+        saveScore(finalScore);
         return;
       }
 
@@ -128,7 +156,6 @@ function SnakeGame({ onClose }) {
         const levelUp = g.eaten % 5 === 0;
         setUi({ score: g.score, status: 'running', speed: Math.floor(g.eaten / 5) + 1 });
         if (levelUp) {
-          // 在本次 tick 結束後重啟計時器（提速）
           setTimeout(() => {
             if (gRef.current.status === 'running') restartRef.current?.(newSpeed);
           }, 0);
@@ -136,9 +163,8 @@ function SnakeGame({ onClose }) {
       }
       draw();
     }, speed);
-  }, [draw]);
+  }, [draw, saveScore]);
 
-  // 把 startTimer 存進 ref，讓 tick 內部可以呼叫
   useEffect(() => { restartRef.current = startTimer; }, [startTimer]);
 
   const startGame = useCallback(() => {
@@ -201,6 +227,12 @@ function SnakeGame({ onClose }) {
 
   const btnStyle = { width: 44, height: 34, fontSize: '1.1rem', padding: 0, textAlign: 'center' };
 
+  // 排行榜：找出目前玩家名次
+  const myKey = playerData?.name?.replace(/[.#$[\]/]/g, '_');
+  const myRank = myKey ? scores.findIndex(s => s.key === myKey) : -1;
+  const top10  = scores.slice(0, 10);
+  const showMeExtra = myRank >= 10; // 玩家不在前10，額外顯示
+
   return (
     <div style={{
       position: 'fixed', inset: 0,
@@ -246,20 +278,73 @@ function SnakeGame({ onClose }) {
           onClick={handleCanvasClick}
         />
 
-        {/* 手機方向鍵（純四方向，無中間鍵） */}
-        <div style={{
-          backgroundColor: '#d4d0c8', padding: '8px 0 6px',
-          borderTop: '1px solid #808080',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-        }}>
-          <button className="win95-button" style={btnStyle} onClick={() => mobileMove([0, -1])}>↑</button>
-          <div style={{ display: 'flex', gap: 3 }}>
-            <button className="win95-button" style={btnStyle} onClick={() => mobileMove([-1, 0])}>←</button>
-            <div style={{ width: 44 }} /> {/* 空位佔位 */}
-            <button className="win95-button" style={btnStyle} onClick={() => mobileMove([1, 0])}>→</button>
+        {/* Game Over → 排行榜；其他狀態 → D-pad */}
+        {ui.status === 'dead' ? (
+          <div style={{
+            backgroundColor: '#d4d0c8', borderTop: '1px solid #808080',
+            padding: '8px 10px', width: COLS * CELL, boxSizing: 'border-box',
+          }}>
+            <div style={{ fontWeight: 'bold', fontSize: '0.85rem', marginBottom: 6, textAlign: 'center' }}>
+              🏆 排行榜
+            </div>
+            <div style={{ maxHeight: 160, overflowY: 'auto', border: '2px inset #808080', backgroundColor: 'white' }}>
+              {top10.length === 0 && (
+                <div style={{ padding: '8px', textAlign: 'center', color: '#888', fontSize: '0.8rem' }}>尚無紀錄</div>
+              )}
+              {top10.map((s, i) => {
+                const isMe = s.key === myKey;
+                return (
+                  <div key={s.key} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '3px 8px', fontSize: '0.8rem',
+                    backgroundColor: isMe ? '#dde8ff' : (i % 2 === 0 ? 'white' : '#f5f5f5'),
+                    fontWeight: isMe ? 'bold' : 'normal',
+                    borderBottom: '1px solid #eee',
+                  }}>
+                    <span style={{ width: 20, textAlign: 'center', flexShrink: 0, color: i < 3 ? ['#cc8800','#666','#884400'][i] : '#999' }}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+                    </span>
+                    <span style={{ flexGrow: 1 }}>{s.name}</span>
+                    <span style={{ color: '#666', fontSize: '0.75rem', flexShrink: 0 }}>{s.group?.split('｜')[1] || ''}</span>
+                    <span style={{ fontWeight: 'bold', flexShrink: 0 }}>{s.score}</span>
+                  </div>
+                );
+              })}
+              {showMeExtra && (
+                <>
+                  <div style={{ padding: '2px 8px', textAlign: 'center', color: '#aaa', fontSize: '0.75rem' }}>⋯</div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '3px 8px', fontSize: '0.8rem',
+                    backgroundColor: '#dde8ff', fontWeight: 'bold', borderTop: '1px solid #ccc',
+                  }}>
+                    <span style={{ width: 20, textAlign: 'center', color: '#999' }}>{myRank + 1}.</span>
+                    <span style={{ flexGrow: 1 }}>{scores[myRank].name}</span>
+                    <span style={{ color: '#666', fontSize: '0.75rem' }}>{scores[myRank].group?.split('｜')[1] || ''}</span>
+                    <span style={{ fontWeight: 'bold' }}>{scores[myRank].score}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 6, fontSize: '0.78rem', color: '#555' }}>
+              點擊畫面 / Enter 重新開始
+            </div>
           </div>
-          <button className="win95-button" style={btnStyle} onClick={() => mobileMove([0, 1])}>↓</button>
-        </div>
+        ) : (
+          <div style={{
+            backgroundColor: '#d4d0c8', padding: '8px 0 6px',
+            borderTop: '1px solid #808080',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+          }}>
+            <button className="win95-button" style={btnStyle} onClick={() => mobileMove([0, -1])}>↑</button>
+            <div style={{ display: 'flex', gap: 3 }}>
+              <button className="win95-button" style={btnStyle} onClick={() => mobileMove([-1, 0])}>←</button>
+              <div style={{ width: 44 }} />
+              <button className="win95-button" style={btnStyle} onClick={() => mobileMove([1, 0])}>→</button>
+            </div>
+            <button className="win95-button" style={btnStyle} onClick={() => mobileMove([0, 1])}>↓</button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -318,7 +318,7 @@ function App() {
       {showMap && <MapWindow onClose={() => setShowMap(false)} />}
 
       {/* 貪吃蛇 */}
-      {showSnake && <SnakeGame onClose={() => setShowSnake(false)} />}
+      {showSnake && <SnakeGame onClose={() => setShowSnake(false)} playerData={playerData} isGuest={isGuest} />}
 
       {/* 全域右鍵 / 長按選單 */}
       {menuPos && (
