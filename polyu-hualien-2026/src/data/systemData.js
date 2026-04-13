@@ -1,8 +1,10 @@
 // src/data/systemData.js
 // 資料夾與文件內容定義
-// doc11（個人任務）的 content 需動態帶入 playerData，由 App.jsx 在開啟時填入
+// systemFolders 已移至 public/content.json，由 App.jsx 在執行時 fetch
 
-// 討論區日期（唯一來源，AdminPage 與 DiscussionBoard 共用）
+// 討論區日期（唯一來源）
+// DiscussionBoard 優先從 Firebase discussionDays 讀取，此為 fallback 預設值
+// AdminDiscussionTab 可將此預設值一鍵匯入 Firebase 以便後台管理
 export const DISCUSSION_DAYS = [
   { key: '2026-05-18', label: '5/18 相見歡' },
   { key: '2026-05-19', label: '5/19 豐田探索' },
@@ -29,114 +31,4 @@ export const welcomeMessages = [
   "在地圖的角落，寫下你的專屬故事吧！",
   "牛犁公會的大門為你敞開，勇敢探索吧！",
   "Loading 地方共鳴模組... 載入完成！",
-];
-
-// systemFolders 已移至 public/content.json，由 App.jsx 在執行時 fetch
-
-export const _legacySystemFolders = [
-  {
-    key: 'activity_info',
-    title: '活動說明',
-    icon: 'icon-folder',
-    docs: [
-      {
-        id: 'doc1',
-        title: '📄 本計畫核心目標.txt',
-        content: '本計畫旨在透過參訪台灣社造典範「社團法人花蓮縣牛犁社區交流協會」，讓旅居香港之優秀跨領域青年學子實地觀察台灣如何整合不同學門知識，解決高齡化及農村邊緣化之全球性課題。',
-      },
-      {
-        id: 'doc2',
-        title: '📄 跨領域實踐重點.txt',
-        content: '讓商管、資工及理工等不同背景之學生，學習如何將數位轉型、商業邏輯、資源配置應用於社區品牌永續經營，並以永續發展為概念，學習台灣的社區營造與由下而上的地方實踐工作。',
-      },
-    ],
-  },
-  {
-    key: 'host_intro',
-    title: '參訪單位介紹',
-    icon: 'icon-folder',
-    docs: [
-      {
-        id: 'doc3',
-        title: '📄 花蓮豐田簡介.txt',
-        content: '我們位處花蓮縣壽豐鄉豐田地區。豐田，是日本時代遺留下來的名字。自1913年建村，1945年日本戰敗後，多數的漢人、原住民才住進這一帶區域。所以來到豐田，你會感覺村子的街道異常的整齊，保留有些建築物還有過去日本時代的氛圍。',
-      },
-      {
-        id: 'doc4',
-        title: '📄 關於牛犁協會.txt',
-        content: '牛犁協會創辦自1996年，已從傳統社區互助轉型為具備「文化、環境、社福、婦幼、產業、數位中心」六大模範系統的區域發展樞紐。不僅帶領壽豐鄉取得國際安全社區認證，每年更輔導花東近150個社區走向永續發展。',
-      },
-    ],
-  },
-  {
-    key: 'schedule',
-    title: '主要流程表',
-    icon: 'icon-folder',
-    docs: [
-      {
-        id: 'doc5',
-        title: '📄 5/18_抵達與相見歡.txt',
-        content: '13:30 搭乘遊覽車前往花蓮豐田\n18:00 大同戲院在地辦桌晚餐與安全宣導\n21:00 入住順泰旅店',
-      },
-      {
-        id: 'doc6',
-        title: '📄 5/19_豐田探索GAME.txt',
-        content: '09:00 透過閱讀、冒險、遊戲方式認識村莊\n13:00 單車導覽，深入聆聽村莊故事\n16:00 主題討論：空間與永續治理',
-      },
-      {
-        id: 'doc7',
-        title: '📄 5/20~5/21_服務學習與永續.txt',
-        content: '09:00 各組專屬服務學習行動\n16:00 主題討論 (人際關係的可持續性/文化永續)\n17:00 (週三) 前進在地壽豐夜市',
-      },
-      {
-        id: 'doc8',
-        title: '📄 5/22_光復鄉與東華大學.txt',
-        content: '10:00 拜訪光復鄉青年團體，認識災後應變與重建工程\n14:00 與國立東華大學民族發展與社工系師生交流\n17:00 與東華師生共進晚餐',
-      },
-      {
-        id: 'doc9',
-        title: '📄 5/24_在地共創回饋.txt',
-        content: '07:00 早起掃地！與村長、志工一起掃街\n09:00 與豐田家政班學習台灣傳統美食\n13:00 藝術敘事工作坊',
-      },
-      {
-        id: 'doc10',
-        title: '📄 5/25_珍重再見.txt',
-        content: '09:00 最後的早餐與合影道別\n10:00 搭車前往機場 (車上享用迦納納部落便當)\n16:30 搭乘 CX0421 班機平安返回香港',
-      },
-    ],
-  },
-  {
-    key: 'group_tasks',
-    title: '各組學習服務安排',
-    icon: 'icon-shield',
-    docs: [
-      {
-        id: 'doc11',
-        title: '⚔️ [機密] 我的專屬陣營任務.txt',
-        content: null, // 動態內容，由 App.jsx 根據 playerData 填入
-      },
-      {
-        id: 'doc12',
-        title: '🎒 行前裝備檢查表.txt',
-        content: '1. 戶外防護裝備：至少 2 套「長袖薄外套」與「長褲」（防小黑蚊叮咬）、運動鞋或登山鞋。\n2. 永續生活實踐：必備個人環保餐具（筷子、湯匙）與水壺。\n3. 健康與行政：花蓮鄉村多以現金交易，請準備足夠的新台幣小額鈔票。',
-      },
-    ],
-  },
-  {
-    key: 'contact',
-    title: '相關聯絡資訊',
-    icon: 'icon-phone',
-    docs: [
-      {
-        id: 'doc13',
-        title: '📄 緊急聯絡人名冊.txt',
-        content: '楊富民 +886985023293 (行程相關資訊，包含住宿、交通等)\n楊凡萱 +886916979745 (活動期間若有不適皆可直接聯繫)',
-      },
-      {
-        id: 'doc14',
-        title: '📄 住宿資訊.txt',
-        content: '統一住宿於：順泰旅店\n地址：974台灣花蓮縣壽豐鄉中山路215號',
-      },
-    ],
-  },
 ];
