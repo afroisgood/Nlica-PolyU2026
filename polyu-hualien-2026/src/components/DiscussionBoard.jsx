@@ -83,11 +83,18 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
 
   const handleLike = async (msgId) => {
     if (!userLikeKey) return;
-    const likeRef = ref(db, `discussionLikes/${selectedDay}/${msgId}/${userLikeKey}`);
-    if (likes[msgId]?.[userLikeKey]) {
-      await remove(likeRef);
+    // 找出此帳號在這個討論日已按讚的留言
+    const alreadyLikedMsgId = Object.keys(likes).find(id => likes[id]?.[userLikeKey]);
+
+    if (alreadyLikedMsgId === msgId) {
+      // 點同一則 → 取消讚
+      await remove(ref(db, `discussionLikes/${selectedDay}/${msgId}/${userLikeKey}`));
     } else {
-      await set(likeRef, true);
+      // 先移除舊讚（如有），再給新讚
+      if (alreadyLikedMsgId) {
+        await remove(ref(db, `discussionLikes/${selectedDay}/${alreadyLikedMsgId}/${userLikeKey}`));
+      }
+      await set(ref(db, `discussionLikes/${selectedDay}/${msgId}/${userLikeKey}`), true);
     }
   };
 
