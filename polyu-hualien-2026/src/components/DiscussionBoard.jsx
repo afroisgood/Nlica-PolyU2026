@@ -1,6 +1,6 @@
 // src/components/DiscussionBoard.jsx
 import { useState, useEffect, useRef } from 'react';
-import { ref, push, onValue, serverTimestamp } from 'firebase/database';
+import { ref, push, onValue, serverTimestamp, set, remove } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { groupThemeColors } from '../data/systemData';
 
@@ -35,11 +35,17 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   const defaultDay = DISCUSSION_DAYS.find(d => d.key === todayKey)?.key || DISCUSSION_DAYS[0].key;
   const [selectedDay, setSelectedDay] = useState(defaultDay);
   const [messages, setMessages]       = useState([]);
+  const [likes, setLikes]             = useState({});
   const [text, setText]               = useState('');
   const [sending, setSending]         = useState(false);
   const [showEmoji, setShowEmoji]     = useState(false);
   const bottomRef = useRef(null);
   const textRef   = useRef(null);
+
+  // 用名稱作為按讚識別 key（替換 Firebase 不允許的字元）
+  const userLikeKey = playerData?.name
+    ? playerData.name.replace(/[.#$[\]/]/g, '_')
+    : null;
 
   useEffect(() => {
     const msgRef = ref(db, `discussions/${selectedDay}`);
@@ -55,6 +61,14 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     return () => unsub();
   }, [selectedDay]);
 
+  useEffect(() => {
+    const likesRef = ref(db, `discussionLikes/${selectedDay}`);
+    const unsub = onValue(likesRef, snap => {
+      setLikes(snap.val() || {});
+    });
+    return () => unsub();
+  }, [selectedDay]);
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleSend = async () => {
@@ -65,6 +79,16 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
       text: text.trim(), timestamp: serverTimestamp(),
     });
     setText(''); setSending(false); setShowEmoji(false);
+  };
+
+  const handleLike = async (msgId) => {
+    if (!userLikeKey) return;
+    const likeRef = ref(db, `discussionLikes/${selectedDay}/${msgId}/${userLikeKey}`);
+    if (likes[msgId]?.[userLikeKey]) {
+      await remove(likeRef);
+    } else {
+      await set(likeRef, true);
+    }
   };
 
   const insertEmoji = emoji => {
@@ -103,6 +127,9 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
         )}
         {messages.map(msg => {
           const color = groupThemeColors[msg.group] ?? '#000080';
+          const msgLikes = likes[msg.id] || {};
+          const likeCount = Object.keys(msgLikes).length;
+          const hasLiked = userLikeKey ? !!msgLikes[userLikeKey] : false;
           return (
             <div key={msg.id} style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
               <div style={{ width:6, flexShrink:0, alignSelf:'stretch', backgroundColor:color, borderRadius:2 }} />
@@ -114,6 +141,21 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
                 </div>
                 <div style={{ fontSize:'0.95rem', lineHeight:1.6, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>
                   {msg.text}
+                </div>
+                <div style={{ marginTop:4 }}>
+                  <button
+                    className="win95-button"
+                    style={{
+                      padding:'1px 10px', fontSize:'0.78rem',
+                      backgroundColor: hasLiked ? '#000080' : undefined,
+                      color: hasLiked ? '#fff' : undefined,
+                    }}
+                    disabled={!userLikeKey}
+                    title={!userLikeKey ? '請登入後才能按讚' : hasLiked ? '取消讚' : '按讚'}
+                    onClick={() => handleLike(msg.id)}
+                  >
+                    👍{likeCount > 0 ? ` ${likeCount}` : ''}
+                  </button>
                 </div>
               </div>
             </div>
