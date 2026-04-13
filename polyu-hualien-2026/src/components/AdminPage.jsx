@@ -7,6 +7,7 @@ import { ref, onValue, remove, push, set } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { fetchUsers } from '../data/fetchUsers';
 import { renderMarkdown } from '../lib/markdown.jsx';
+import { DISCUSSION_DAYS } from '../data/systemData';
 import Lightbox from './Lightbox.jsx';
 
 const GITHUB_OWNER = 'afroisgood';
@@ -14,15 +15,6 @@ const GITHUB_REPO = 'Nlica-PolyU2026';
 const CONTENT_PATH = 'polyu-hualien-2026/public/content.json';
 const MEDIA_DIR = 'polyu-hualien-2026/public/media';
 const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/polyu-hualien-2026/public/media`;
-
-const DISCUSSION_DAYS = [
-  { key: '2026-05-18', label: '5/18 相見歡' },
-  { key: '2026-05-19', label: '5/19 豐田探索' },
-  { key: '2026-05-20', label: '5/20 服務學習 Day1' },
-  { key: '2026-05-21', label: '5/21 服務學習 Day2' },
-  { key: '2026-05-22', label: '5/22 光復鄉' },
-  { key: '2026-05-24', label: '5/24 在地共創' },
-];
 
 // ── GitHub 媒體上傳 ────────────────────────────────────────────────
 async function uploadMediaToGitHub(pat, filename, base64Content) {

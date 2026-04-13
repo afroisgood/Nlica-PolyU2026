@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { fetchUsers } from './data/fetchUsers';
 import { welcomeMessages, groupThemeColors } from './data/systemData';
 import LoginScreen from './components/LoginScreen';
@@ -8,10 +8,10 @@ import FolderView from './components/FolderView';
 import DocumentView from './components/DocumentView';
 import BootScreen from './components/BootScreen';
 import StatusBar from './components/StatusBar';
-import AdminPage from './components/AdminPage';
 import DiscussionBoard from './components/DiscussionBoard';
-import MapWindow from './components/MapWindow';
-import SnakeGame from './components/SnakeGame';
+const AdminPage  = lazy(() => import('./components/AdminPage'));
+const MapWindow  = lazy(() => import('./components/MapWindow'));
+const SnakeGame  = lazy(() => import('./components/SnakeGame'));
 import NotificationBalloon from './components/NotificationBalloon';
 import ContextMenu from './components/ContextMenu';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
@@ -198,7 +198,7 @@ function App() {
   const handleTouchMove = () => clearTimeout(longPressTimer.current);
   const handleTouchEnd  = () => clearTimeout(longPressTimer.current);
 
-  if (isAdmin) return <AdminPage />;
+  if (isAdmin) return <Suspense fallback={null}><AdminPage /></Suspense>;
 
   if (isBooting) return <BootScreen onComplete={() => { setIsBooting(false); playBoot(); }} />;
 
@@ -315,10 +315,14 @@ function App() {
       <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
 
       {/* 互動地圖 */}
-      {showMap && <MapWindow onClose={() => setShowMap(false)} />}
+      <Suspense fallback={null}>
+        {showMap && <MapWindow onClose={() => setShowMap(false)} />}
+      </Suspense>
 
       {/* 貪吃蛇 */}
-      {showSnake && <SnakeGame onClose={() => setShowSnake(false)} playerData={playerData} isGuest={isGuest} />}
+      <Suspense fallback={null}>
+        {showSnake && <SnakeGame onClose={() => setShowSnake(false)} playerData={playerData} isGuest={isGuest} />}
+      </Suspense>
 
       {/* 全域右鍵 / 長按選單 */}
       {menuPos && (

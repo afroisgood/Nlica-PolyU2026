@@ -30,11 +30,12 @@ const KEY_MAP = {
 };
 
 function SnakeGame({ onClose, playerData, isGuest }) {
-  const cvRef        = useRef(null);
-  const gRef         = useRef(mkGame());
-  const tmRef        = useRef(null);
-  const restartRef   = useRef(null);
-  const [ui, setUi]  = useState({ score: 0, status: 'idle', speed: 1 });
+  const cvRef           = useRef(null);
+  const gRef            = useRef(mkGame());
+  const tmRef           = useRef(null);
+  const restartRef      = useRef(null);
+  const transitioningRef = useRef(false); // 防止快速點擊造成狀態競爭
+  const [ui, setUi]     = useState({ score: 0, status: 'idle', speed: 1 });
   const [scores, setScores] = useState([]); // 排行榜資料
 
   // 讀取排行榜
@@ -183,6 +184,10 @@ function SnakeGame({ onClose, playerData, isGuest }) {
   }, [startTimer]);
 
   const handleCanvasClick = useCallback(() => {
+    if (transitioningRef.current) return; // 轉場中忽略重複點擊
+    transitioningRef.current = true;
+    setTimeout(() => { transitioningRef.current = false; }, 120);
+
     const g = gRef.current;
     if (g.status === 'idle' || g.status === 'dead') startGame();
     else if (g.status === 'running') {

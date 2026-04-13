@@ -2,16 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ref, push, onValue, serverTimestamp, set, remove } from 'firebase/database';
 import { db } from '../lib/firebase';
-import { groupThemeColors } from '../data/systemData';
-
-const DISCUSSION_DAYS = [
-  { key: '2026-05-18', label: '5/18 相見歡' },
-  { key: '2026-05-19', label: '5/19 豐田探索' },
-  { key: '2026-05-20', label: '5/20 服務學習 Day1' },
-  { key: '2026-05-21', label: '5/21 服務學習 Day2' },
-  { key: '2026-05-22', label: '5/22 光復鄉' },
-  { key: '2026-05-24', label: '5/24 在地共創' },
-];
+import { groupThemeColors, DISCUSSION_DAYS } from '../data/systemData';
 
 const EMOJI_LIST = [
   '😊','😂','🥰','😎','🤔','😭','🥹','😅','🤣','😆',
