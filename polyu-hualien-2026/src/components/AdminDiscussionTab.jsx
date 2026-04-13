@@ -19,22 +19,27 @@ function AdminDiscussionTab({ onBack, setActiveTab, onLogout }) {
   const [discussionMsgs, setDiscussionMsgs] = useState([]);
   const [checkedMsgs, setCheckedMsgs]     = useState(new Set());
 
-  // 載入討論日期（Firebase，沒資料時 fallback 顯示 systemData 預設值）
+  // 載入討論日期（Firebase，沒資料或無權限時 fallback 顯示 systemData 預設值）
   useEffect(() => {
+    const fallback = () => {
+      setDays(DISCUSSION_DAYS);
+      setSelectedDay(prev => prev || DISCUSSION_DAYS[0]?.key || '');
+    };
     const r = ref(db, 'discussionDays');
-    return onValue(r, (snap) => {
-      const data = snap.val();
-      if (!data) {
-        setDays(DISCUSSION_DAYS); // fallback（無 id 欄位，代表尚未入庫）
-        setSelectedDay(prev => prev || DISCUSSION_DAYS[0]?.key || '');
-        return;
-      }
-      const list = Object.entries(data)
-        .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      setDays(list);
-      setSelectedDay(prev => prev || list[0]?.key || '');
-    });
+    return onValue(
+      r,
+      (snap) => {
+        const data = snap.val();
+        if (!data) { fallback(); return; }
+        const list = Object.entries(data)
+          .map(([id, v]) => ({ id, ...v }))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        setDays(list);
+        setSelectedDay(prev => prev || list[0]?.key || '');
+      },
+      // 權限不足或網路錯誤時立即 fallback，不讓頁面卡住
+      (err) => { console.warn('discussionDays:', err.message); fallback(); }
+    );
   }, []);
 
   // 載入留言
