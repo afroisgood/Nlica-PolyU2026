@@ -130,9 +130,11 @@ function MapWindow({ onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         backgroundColor: 'rgba(0,0,0,0.45)',
         zIndex: 9999,
+        overflowY: 'auto',
+        padding: '8px 0',
       }}
       onClick={() => setPopup(null)}
     >
@@ -184,7 +186,7 @@ function MapWindow({ onClose }) {
         </div>
 
         {/* 地圖區域 */}
-        <div style={{ height: 380, flexShrink: 0 }}>
+        <div style={{ height: 'min(380px, 45vh)', flexShrink: 0 }}>
           <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
         </div>
 

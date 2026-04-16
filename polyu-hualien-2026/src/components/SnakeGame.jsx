@@ -241,9 +241,11 @@ function SnakeGame({ onClose, playerData, isGuest }) {
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
       backgroundColor: 'rgba(0,0,0,0.45)',
       zIndex: 9999,
+      overflowY: 'auto',
+      padding: '8px 0',
     }}
       onClick={onClose}
     >
