@@ -8,7 +8,6 @@ function DocumentView({ doc, onBack }) {
   const [scrollPct, setScrollPct] = useState(0);
   const [showToc, setShowToc] = useState(false);
   const docRef = useRef(null);
-  const touchStart = useRef(null);
 
   // 從內容擷取 #、## 標題作為目錄
   const headings = doc.content
@@ -32,28 +31,8 @@ function DocumentView({ doc, onBack }) {
     setShowToc(false);
   };
 
-  // 右滑返回（從螢幕左40%起始）
-  const handleTouchStart = (e) => {
-    const t = e.touches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY };
-  };
-  const handleTouchEnd = (e) => {
-    if (!touchStart.current) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStart.current.x;
-    const dy = t.clientY - touchStart.current.y;
-    if (dx > 70 && Math.abs(dy) < Math.abs(dx) && touchStart.current.x < window.innerWidth * 0.4) {
-      onBack();
-    }
-    touchStart.current = null;
-  };
-
   return (
-    <div
-      style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
       {/* 標題列 */}
       <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <strong style={{ fontSize: 'clamp(0.85rem, 3.5vw, 1.2rem)', wordBreak: 'break-all', minWidth: 0 }}>
