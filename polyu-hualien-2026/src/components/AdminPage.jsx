@@ -215,15 +215,6 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
           </div>
         )}
 
-        {isLink && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <label style={{ minWidth: 64 }}>網址：</label>
-            <input className="win95-input" style={{ flex: 1 }}
-              placeholder="https://maps.app.goo.gl/..."
-              value={url} onChange={(e) => setUrl(e.target.value)} />
-          </div>
-        )}
-
         {isImage && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <label style={{ minWidth: 64 }}>或上傳：</label>
