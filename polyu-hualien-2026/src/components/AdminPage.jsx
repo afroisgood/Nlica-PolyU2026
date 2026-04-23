@@ -268,6 +268,35 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
   );
 }
 
+// ── 可選圖示清單 ─────────────────────────────────────────────────
+const FOLDER_ICONS = [
+  { value: 'icon-folder',    label: '資料夾' },
+  { value: 'icon-scroll',    label: '捲軸'   },
+  { value: 'icon-checklist', label: '清單'   },
+  { value: 'icon-map',       label: '地圖'   },
+  { value: 'icon-pin',       label: '地圖釘' },
+  { value: 'icon-target',    label: '靶心'   },
+  { value: 'icon-shield',    label: '盾牌'   },
+  { value: 'icon-phone',     label: '電話'   },
+  { value: 'icon-chat',      label: '對話'   },
+];
+
+// ── 圖示選擇器 ───────────────────────────────────────────────────
+function IconPicker({ value, onChange, onClose }) {
+  return (
+    <div style={{ position: 'absolute', zIndex: 200, top: '100%', left: 0, backgroundColor: '#c0c0c0', border: '2px solid #000080', padding: 8, display: 'flex', flexWrap: 'wrap', gap: 6, width: 220 }}>
+      {FOLDER_ICONS.map((ic) => (
+        <div key={ic.value} title={ic.label}
+          onClick={() => { onChange(ic.value); onClose(); }}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer', padding: '4px 6px', backgroundColor: value === ic.value ? '#000080' : 'transparent', borderRadius: 2 }}>
+          <div className={`pixel-icon ${ic.value}`} style={{ width: 24, height: 24 }} />
+          <span style={{ fontSize: '0.62rem', color: value === ic.value ? '#fff' : '#000', whiteSpace: 'nowrap' }}>{ic.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── 主元件 ────────────────────────────────────────────────────────
 function AdminPage() {
   const [pat, setPat]                         = useState(sessionStorage.getItem('admin_pat') || '');
@@ -283,6 +312,12 @@ function AdminPage() {
   const [previewLightbox, setPreviewLightbox] = useState(null);
   const [dragItem, setDragItem]               = useState(null);
   const [dragOver, setDragOver]               = useState(null);
+  const [showNewFolderForm, setShowNewFolderForm] = useState(false);
+  const [newFolderTitle, setNewFolderTitle]   = useState('');
+  const [newFolderIcon, setNewFolderIcon]     = useState('icon-folder');
+  const [editingFolderIdx, setEditingFolderIdx] = useState(null);
+  const [editingFolderTitle, setEditingFolderTitle] = useState('');
+  const [iconPickerIdx, setIconPickerIdx]     = useState(null);
   const textareaRef = useRef(null);
   const savedSel    = useRef({ start: 0, end: 0, text: '' });
 
@@ -351,6 +386,33 @@ function AdminPage() {
         docs: f.docs.map((d, di) => di !== docIdx ? d : { ...d, [field]: value }),
       }
     ));
+  };
+
+  const addFolder = () => {
+    if (!newFolderTitle.trim()) return;
+    const newFolder = { key: `folder_${Date.now()}`, title: newFolderTitle.trim(), icon: newFolderIcon, docs: [] };
+    setFolders((prev) => [...prev, newFolder]);
+    setSelectedFolderIdx(folders.length);
+    setSelectedDocIdx(0);
+    setNewFolderTitle('');
+    setNewFolderIcon('icon-folder');
+    setShowNewFolderForm(false);
+  };
+
+  const deleteFolder = (fi) => {
+    if (!window.confirm(`確定刪除「${folders[fi].title}」資料夾及其所有 ${folders[fi].docs.length} 份文件？`)) return;
+    setFolders((prev) => prev.filter((_, i) => i !== fi));
+    setSelectedFolderIdx((prev) => Math.min(prev, Math.max(0, folders.length - 2)));
+    setSelectedDocIdx(0);
+  };
+
+  const updateFolderField = (fi, field, value) => {
+    setFolders((prev) => prev.map((f, i) => i !== fi ? f : { ...f, [field]: value }));
+  };
+
+  const commitFolderTitle = (fi) => {
+    if (editingFolderTitle.trim()) updateFolderField(fi, 'title', editingFolderTitle.trim());
+    setEditingFolderIdx(null);
   };
 
   const addDoc = (folderIdx) => {
@@ -453,8 +515,50 @@ function AdminPage() {
         <div style={{ padding: 8, overflowY: 'auto', flexGrow: 1 }}>
           {folders.map((folder, fi) => (
             <div key={folder.key} style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: 4, color: '#000080' }}>
-                📁 {folder.title}
+              {/* 資料夾標題列 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, position: 'relative' }}>
+                {/* 圖示按鈕（點擊開圖示選擇器） */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div className={`pixel-icon ${folder.icon || 'icon-folder'}`}
+                    style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }}
+                    title="點擊更換圖示"
+                    onClick={() => setIconPickerIdx(iconPickerIdx === fi ? null : fi)}
+                  />
+                  {iconPickerIdx === fi && (
+                    <IconPicker
+                      value={folder.icon}
+                      onChange={(v) => updateFolderField(fi, 'icon', v)}
+                      onClose={() => setIconPickerIdx(null)}
+                    />
+                  )}
+                </div>
+
+                {/* 可點擊改名的標題 */}
+                {editingFolderIdx === fi ? (
+                  <input
+                    autoFocus
+                    value={editingFolderTitle}
+                    onChange={(e) => setEditingFolderTitle(e.target.value)}
+                    onBlur={() => commitFolderTitle(fi)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') commitFolderTitle(fi); if (e.key === 'Escape') setEditingFolderIdx(null); }}
+                    style={{ flex: 1, fontSize: '0.82rem', padding: '1px 4px', fontFamily: 'inherit' }}
+                  />
+                ) : (
+                  <span
+                    style={{ flex: 1, fontWeight: 'bold', fontSize: '0.85rem', color: '#000080', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title="點擊改名"
+                    onClick={() => { setEditingFolderIdx(fi); setEditingFolderTitle(folder.title); }}
+                  >
+                    {folder.title}
+                  </span>
+                )}
+
+                {/* 刪除資料夾 */}
+                <button
+                  style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1 }}
+                  title="刪除資料夾"
+                  onClick={() => deleteFolder(fi)}
+                >✕</button>
               </div>
               {folder.docs.map((doc, di) => {
                 const isSelected = selectedFolderIdx === fi && selectedDocIdx === di;
@@ -500,6 +604,42 @@ function AdminPage() {
               </div>
             </div>
           ))}
+
+          {/* 新增資料夾 */}
+          {showNewFolderForm ? (
+            <div style={{ border: '2px solid #000080', backgroundColor: '#eef', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#000080' }}>新增資料夾</div>
+              <input
+                autoFocus
+                className="win95-input"
+                placeholder="資料夾名稱"
+                value={newFolderTitle}
+                onChange={(e) => setNewFolderTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addFolder(); if (e.key === 'Escape') setShowNewFolderForm(false); }}
+                style={{ fontSize: '0.82rem', padding: '3px 6px', width: '100%', boxSizing: 'border-box', maxWidth: '100%', marginTop: 0 }}
+              />
+              <div style={{ fontSize: '0.78rem', color: '#555' }}>選擇圖示：</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {FOLDER_ICONS.map((ic) => (
+                  <div key={ic.value} title={ic.label}
+                    onClick={() => setNewFolderIcon(ic.value)}
+                    style={{ cursor: 'pointer', padding: 4, border: newFolderIcon === ic.value ? '2px solid #000080' : '2px solid transparent', backgroundColor: newFolderIcon === ic.value ? '#d0d8ff' : 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <div className={`pixel-icon ${ic.value}`} style={{ width: 22, height: 22 }} />
+                    <span style={{ fontSize: '0.58rem' }}>{ic.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="win95-button" style={{ fontSize: '0.78rem', padding: '2px 8px', marginTop: 0 }} onClick={addFolder} disabled={!newFolderTitle.trim()}>✅ 建立</button>
+                <button className="win95-button" style={{ fontSize: '0.78rem', padding: '2px 8px', marginTop: 0 }} onClick={() => { setShowNewFolderForm(false); setNewFolderTitle(''); setNewFolderIcon('icon-folder'); }}>取消</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#000080', cursor: 'pointer', fontWeight: 'bold' }}
+              onClick={() => setShowNewFolderForm(true)}>
+              ＋ 新增資料夾
+            </div>
+          )}
         </div>
       </div>
 
