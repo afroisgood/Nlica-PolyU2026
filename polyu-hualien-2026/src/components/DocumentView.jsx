@@ -35,7 +35,7 @@ function DocumentView({ doc, onBack }) {
     <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
       {/* 標題列 */}
       <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-        <strong style={{ fontSize: 'clamp(0.85rem, 3.5vw, 1.2rem)', wordBreak: 'break-all', minWidth: 0 }}>
+        <strong style={{ fontSize: 'clamp(0.85rem, 3.5vw, 1.2rem)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           閱讀檔案：{doc.title}
         </strong>
         <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
