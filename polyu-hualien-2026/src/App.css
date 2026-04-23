@@ -862,3 +862,59 @@ body {
   cursor: default;
   overflow: hidden;
 }
+
+/* ═══════════════════════════════════════════════════════
+   文件閱讀：進度條 & 目錄（TOC）
+   ═══════════════════════════════════════════════════════ */
+
+/* 進度條底軌 */
+.doc-progress-track {
+  height: 3px;
+  background-color: var(--win95-mid);
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+/* 進度條填充 */
+.doc-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background-color: var(--win95-title);
+  transition: width 0.12s linear;
+  min-width: 0;
+}
+
+/* 目錄面板 */
+.doc-toc {
+  background-color: white;
+  border: 2px inset var(--win95-mid);
+  margin-bottom: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* 目錄項目 */
+.doc-toc-item {
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid #e8e8e8;
+}
+.doc-toc-item:last-child { border-bottom: none; }
+.doc-toc-item:hover {
+  background-color: var(--win95-title);
+  color: white;
+}
+.doc-toc-item[data-level="2"] {
+  padding-left: 24px;
+  font-size: 0.88rem;
+  color: #333;
+}
+.doc-toc-item[data-level="2"]:hover { color: white; }

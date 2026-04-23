@@ -129,9 +129,9 @@ export function renderMarkdown(content, onImageClick, docId = null) {
   lines.forEach((line, i) => {
     const key = `line-${i}`;
 
-    if (line.startsWith('### ')) { elements.push(<h5 key={key} className="md-h3">{line.slice(4)}</h5>); return; }
-    if (line.startsWith('## '))  { elements.push(<h4 key={key} className="md-h2">{line.slice(3)}</h4>); return; }
-    if (line.startsWith('# '))   { elements.push(<h3 key={key} className="md-h1">{line.slice(2)}</h3>); return; }
+    if (line.startsWith('### ')) { elements.push(<h5 key={key} id={`md-h-${i}`} className="md-h3">{line.slice(4)}</h5>); return; }
+    if (line.startsWith('## '))  { elements.push(<h4 key={key} id={`md-h-${i}`} className="md-h2">{line.slice(3)}</h4>); return; }
+    if (line.startsWith('# '))   { elements.push(<h3 key={key} id={`md-h-${i}`} className="md-h1">{line.slice(2)}</h3>); return; }
     if (line.trim() === '---')   { elements.push(<hr key={key} className="md-hr" />); return; }
 
     // ── Checkbox ──
