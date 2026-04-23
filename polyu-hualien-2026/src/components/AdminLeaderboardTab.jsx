@@ -12,7 +12,12 @@ function AdminLeaderboardTab({ onBack, setActiveTab, onLogout }) {
     const unsub = onValue(ref(db, 'snakeScores'), (snap) => {
       const data = snap.val();
       if (!data) { setScores([]); return; }
-      setScores(Object.entries(data).map(([key, v]) => ({ key, ...v })).sort((a, b) => b.score - a.score));
+      setScores(
+        Object.entries(data)
+          .map(([key, v]) => ({ key, ...v }))
+          .filter((s) => s.name && typeof s.score === 'number')
+          .sort((a, b) => b.score - a.score)
+      );
     });
     return unsub;
   }, []);
