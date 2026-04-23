@@ -32,7 +32,7 @@ function DocumentView({ doc, onBack }) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
       {/* 標題列 */}
       <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <strong style={{ fontSize: 'clamp(0.85rem, 3.5vw, 1.2rem)', wordBreak: 'break-all', minWidth: 0 }}>

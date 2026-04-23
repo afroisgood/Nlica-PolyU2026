@@ -195,7 +195,7 @@ body {
   border: 2px inset var(--win95-mid);
   overflow-y: auto;
   flex-grow: 1;
-  min-height: 400px;
+  min-height: 0;
 }
 
 .win95-file-item {
@@ -220,7 +220,7 @@ body {
   font-size: 1.1rem;
   line-height: 1.8;
   flex-grow: 1;
-  min-height: 400px;
+  min-height: 0;
 }
 
 /* src/App.css (替換掉原本最下方的圖示設定) */
