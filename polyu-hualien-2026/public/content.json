@@ -1,6 +1,7 @@
 {
-  "folders": [
+  "items": [
     {
+      "type": "folder",
       "key": "activity_info",
       "title": "活動說明",
       "icon": "icon-scroll",
@@ -23,11 +24,12 @@
         {
           "id": "doc_1775921984670",
           "title": "🎧 《我在午後的豐田睡著》.mp3",
-          "content": "[audio:《我在午後的豐田睡著》洪佩瑜Ｘ羅棋諠Ｘ鄭曜弦](https://www.youtube.com/watch?v=3lIj8ZNRnvg)"
+          "content": "[audio:《我在午後的豐田睡著》洪佩瑜Ｘ羅棋諠Ｘ鄭曜弦](https://www.youtube.com/watch?v=3lIj8ZNRnvg)\n\n詞曲Composers：洪佩瑜 PeiYu Hung、羅棋諠 MiMi Lø、鄭曜弦 Zion Jeng\n\n水 慢慢地流  不動與移動之間\n風 快快地過  日昇與日落之間\n\n你說過去的記憶早已經過去  活著難免忘記\n但時間的流沖散  都成為或深或淺的痕跡\n\n我說現在的風景不再如往常  那樣絢爛清晰\n可只要朝著山走去  永遠能夠抵達心中最安穩的地方 不在他方\n\n水 慢慢地流  不動與移動之間\n風 快快地過  日昇與日落之間\n那些偷不走的寶藏  要繼續舞著繼續傳唱\n\n我說現在的風景不再如往常  那樣絢爛清晰\n可只要朝著山走去  永遠能夠抵達心中最安穩的地方 不在他方\n\n水 慢慢地流  不動與移動之間\n風 快快地過  日昇與日落之間\n\n水 慢慢地流  不動與移動之間\n風 快快地過  日昇與日落之間\n那些偷不走的寶藏  要繼續舞著繼續傳唱\n\n水慢慢地 流  風快快地\n過"
         }
       ]
     },
     {
+      "type": "folder",
       "key": "host_intro",
       "title": "參訪單位介紹",
       "icon": "icon-map",
@@ -55,6 +57,7 @@
       ]
     },
     {
+      "type": "folder",
       "key": "schedule",
       "title": "主要流程表",
       "icon": "icon-checklist",
@@ -97,6 +100,7 @@
       ]
     },
     {
+      "type": "folder",
       "key": "contact",
       "title": "相關聯絡資訊",
       "icon": "icon-phone",
@@ -112,10 +116,9 @@
           "content": "住宿地點：[順泰旅店](https://maps.app.goo.gl/aeL5rmrNFsyr5fey7)\n地址：974台灣花蓮縣壽豐鄉中山路215號"
         }
       ]
-    }
-  ],
-  "rootDocs": [
+    },
     {
+      "type": "doc",
       "id": "rootdoc_1777862760892",
       "title": "📄 新文件.txt",
       "icon": "icon-scroll",
