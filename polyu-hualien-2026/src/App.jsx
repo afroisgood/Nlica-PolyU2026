@@ -25,15 +25,6 @@ const isTouchDevice = () =>
   (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
 
 // 固定的各組任務資料夾（內容依登入者動態產生，不放 content.json）
-const GROUP_TASK_FOLDER = {
-  key: 'group_tasks',
-  title: '各組學習服務安排',
-  icon: 'icon-target',
-  docs: [
-    { id: 'doc11', title: '⚔️ [機密] 我的專屬陣營任務.txt', content: null },
-    { id: 'doc12', title: '🎒 行前裝備檢查表.txt', content: null },
-  ],
-};
 
 function App() {
   const [isBooting, setIsBooting] = useState(true);
@@ -85,27 +76,7 @@ function App() {
     return visibility.includes(userGroupTag);
   };
 
-  // 合併 content.json 資料夾 + 各組任務資料夾（訪客看不到），再套用可見度過濾
-  const allFolders = isGuest ? contentFolders : [
-    ...contentFolders,
-    {
-      ...GROUP_TASK_FOLDER,
-      docs: GROUP_TASK_FOLDER.docs.map((doc) => {
-        if (doc.id === 'doc11' && playerData) {
-          return {
-            ...doc,
-            content: `[ 陣營身分 ] ${playerData.group}\n[ 服務地點 ] ${playerData.location}\n[ 帶領導師 ] ${playerData.mentor}\n[ 組別人數 ] ${playerData.groupSize}\n\n[ 主線任務指派 ]\n${playerData.mainQuest}\n\n[ 行前裝備提示 ]\n${playerData.gear}`,
-          };
-        }
-        if (doc.id === 'doc12' && playerData) {
-          return { ...doc, content: playerData.gear };
-        }
-        return doc;
-      }),
-    },
-  ];
-
-  const visibleFolders = allFolders
+  const visibleFolders = contentFolders
     .filter((f) => canSee(f.visibility))
     .map((f) => ({ ...f, docs: (f.docs || []).filter((d) => canSee(d.visibility)) }));
 
