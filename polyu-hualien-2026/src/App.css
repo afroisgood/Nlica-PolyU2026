@@ -412,7 +412,7 @@ body {
   /* 主視窗：佔滿螢幕、取消 max-height 限制 */
   .win95-window {
     width: 100%;
-    height: 96vh;
+    height: 96dvh;
     max-height: none;
     padding: 1px;
   }
@@ -463,7 +463,9 @@ body {
 
   .win95-file-item {
     font-size: 0.9rem;
-    padding: 6px 8px;
+    padding: 11px 8px;
+    min-height: 44px;
+    box-sizing: border-box;
   }
 
   /* 輸入框與按鈕 */
@@ -494,6 +496,35 @@ body {
 
   .statusbar-cell {
     padding: 1px 5px;
+  }
+
+  /* 登入後頂部 header：壓縮高度 */
+  .user-header {
+    margin-bottom: 8px !important;
+    padding-bottom: 8px !important;
+    gap: 8px !important;
+  }
+
+  .user-header-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+  }
+
+  .user-header h2 {
+    font-size: 1rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .user-header p {
+    font-size: 0.8rem !important;
+  }
+
+  /* 討論區按讚按鈕：擴大觸控面積 */
+  .disc-like-btn {
+    min-height: 36px !important;
+    min-width: 36px !important;
+    padding: 4px 8px !important;
   }
 }
 

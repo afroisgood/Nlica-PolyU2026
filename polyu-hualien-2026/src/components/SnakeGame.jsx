@@ -252,7 +252,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
     >
       <div
         className="win95-window"
-        style={{ display: 'flex', flexDirection: 'column', width: 'fit-content', maxWidth: '96vw' }}
+        style={{ display: 'flex', flexDirection: 'column', width: `min(${COLS * CELL}px, 96vw)` }}
         onClick={e => e.stopPropagation()}
       >
         <div className="win95-title-bar">
@@ -266,7 +266,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '4px 10px', backgroundColor: '#d4d0c8', borderBottom: '1px solid #808080',
-          fontSize: '0.85rem',
+          fontSize: '0.85rem', width: '100%', boxSizing: 'border-box',
         }}>
           <span>分數：<strong>{ui.score}</strong></span>
           <span style={{ fontSize: '0.75rem', color: '#666' }}>
@@ -282,7 +282,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
           ref={cvRef}
           width={COLS * CELL}
           height={ROWS * CELL}
-          style={{ display: 'block', width: COLS * CELL, height: ROWS * CELL, cursor: 'pointer' }}
+          style={{ display: 'block', width: '100%', maxWidth: COLS * CELL, aspectRatio: '1 / 1', cursor: 'pointer', imageRendering: 'pixelated' }}
           onClick={handleCanvasClick}
         />
 
@@ -290,7 +290,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
         {ui.status === 'dead' ? (
           <div style={{
             backgroundColor: '#d4d0c8', borderTop: '1px solid #808080',
-            padding: '8px 10px', width: COLS * CELL, boxSizing: 'border-box',
+            padding: '8px 10px', width: '100%', boxSizing: 'border-box',
           }}>
             <div style={{ fontWeight: 'bold', fontSize: '0.85rem', marginBottom: 6, textAlign: 'center' }}>
               🏆 排行榜

@@ -269,8 +269,8 @@ function App() {
 
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '12px', flexWrap: 'wrap' }}>
-                <div style={{ width: '64px', height: '64px', minWidth: '64px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
+              <div className="user-header" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', borderBottom: '2px solid var(--win95-mid)', paddingBottom: '12px', flexWrap: 'wrap' }}>
+                <div className="user-header-avatar" style={{ width: '64px', height: '64px', minWidth: '64px', backgroundColor: 'white', border: '2px inset var(--win95-mid)', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', flexShrink: 0 }}>
                   {playerData?.avatarUrl
                     ? <img src={playerData.avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'pixelated' }} />
                     : <div className="pixel-icon icon-robot-head" style={{ top: '6px' }}></div>
@@ -302,7 +302,6 @@ function App() {
                   onOpenSnake={() => setShowSnake(true)}
                   onOpenDisasterBook={() => setShowDisasterBook(true)}
                   onLogout={handleLogout}
-                  onAbout={() => setShowAbout(true)}
                 />
               )}
               {!showDiscussion && currentFolder === null && currentDoc !== null && (

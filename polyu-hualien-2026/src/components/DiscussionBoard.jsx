@@ -155,7 +155,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
                   <span style={{ fontWeight:'bold', fontSize:'0.9rem', color }}>{msg.name}</span>
                   <span style={{ fontSize:'0.75rem', color:'#666' }}>{msg.group?.split('｜')[1] || ''}</span>
                   <button
-                    className="win95-button"
+                    className="win95-button disc-like-btn"
                     style={{
                       padding:'0px 7px', fontSize:'0.75rem', lineHeight:'1.4',
                       backgroundColor: hasLiked ? '#000080' : undefined,
