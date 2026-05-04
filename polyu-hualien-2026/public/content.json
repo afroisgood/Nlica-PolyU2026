@@ -104,6 +104,13 @@
     },
     {
       "type": "doc",
+      "id": "rootdoc_1777881759822",
+      "title": "社區防災地圖",
+      "icon": "icon-pin",
+      "content": "![圖片](https://lh3.googleusercontent.com/d/1pgrw3WF04xJJvSqaIe4onzbd-icIfSUE)"
+    },
+    {
+      "type": "doc",
       "id": "rootdoc_1777873040595",
       "title": "第一組｜傳統工藝.txt",
       "icon": "icon-target",
