@@ -22,9 +22,9 @@ function formatTime(ts) {
 }
 
 function DiscussionBoard({ playerData, isGuest, onBack }) {
-  const todayKey   = getTodayKey();
-  const defaultDay = DISCUSSION_DAYS.find(d => d.key === todayKey)?.key || DISCUSSION_DAYS[0].key;
-  const [selectedDay, setSelectedDay] = useState(defaultDay);
+  const todayKey = getTodayKey();
+  const [days, setDays]               = useState(DISCUSSION_DAYS); // 預設靜態值，Firebase 載入後取代
+  const [selectedDay, setSelectedDay] = useState('');
   const [messages, setMessages]       = useState([]);
   const [likes, setLikes]             = useState({});
   const [text, setText]               = useState('');
@@ -32,6 +32,25 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   const [showEmoji, setShowEmoji]     = useState(false);
   const bottomRef = useRef(null);
   const textRef   = useRef(null);
+
+  // 從 Firebase 載入後台設定的討論日期，無資料時沿用靜態 DISCUSSION_DAYS
+  useEffect(() => {
+    const r = ref(db, 'discussionDays');
+    return onValue(r, (snap) => {
+      const data = snap.val();
+      const list = data
+        ? Object.entries(data)
+            .map(([id, v]) => ({ id, ...v }))
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+        : DISCUSSION_DAYS;
+      setDays(list);
+      setSelectedDay(prev => {
+        // 維持已選的日期；若當天在清單內則預設今天；否則選第一筆
+        if (prev && list.some(d => d.key === prev)) return prev;
+        return list.find(d => d.key === todayKey)?.key || list[0]?.key || '';
+      });
+    }, () => {}); // 網路錯誤靜默，保留靜態預設
+  }, []);
 
   // 用名稱作為按讚識別 key（替換 Firebase 不允許的字元）
   const userLikeKey = playerData?.name
@@ -99,7 +118,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     setTimeout(() => { el.focus(); el.setSelectionRange(s + emoji.length, s + emoji.length); }, 0);
   };
 
-  const selectedLabel = DISCUSSION_DAYS.find(d => d.key === selectedDay)?.label || selectedDay;
+  const selectedLabel = days.find(d => d.key === selectedDay)?.label || selectedDay;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flexGrow:1, minHeight:0, overflow:'hidden' }}>
@@ -111,7 +130,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
         <select className="win95-input"
           style={{ marginLeft:'auto', marginTop:0, fontSize:'0.9rem', padding:'2px 6px', cursor:'pointer', minWidth:0 }}
           value={selectedDay} onChange={e => setSelectedDay(e.target.value)}>
-          {DISCUSSION_DAYS.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
+          {days.map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
         </select>
       </div>
 
