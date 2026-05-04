@@ -1,6 +1,6 @@
 // src/lib/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
+import { getDatabase, ref, get, set, remove } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBX0jSPJ8XqyE1Fc5qzfNk1DLpGTdU5mv4',
@@ -14,3 +14,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
+
+// customCodes: { [originalCode]: customCode }
+export async function fetchCustomCodes() {
+  const snap = await get(ref(db, 'customCodes'));
+  return snap.val() || {};
+}
+
+export async function setCustomCode(originalCode, customCode) {
+  await set(ref(db, `customCodes/${originalCode}`), customCode);
+}
+
+export async function resetCustomCode(originalCode) {
+  await remove(ref(db, `customCodes/${originalCode}`));
+}

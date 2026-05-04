@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { fetchUsers } from './data/fetchUsers';
 import { welcomeMessages, groupThemeColors } from './data/systemData';
 import LoginScreen from './components/LoginScreen';
+import CustomCodeModal from './components/CustomCodeModal';
 import Desktop from './components/Desktop';
 import FolderView from './components/FolderView';
 import DocumentView from './components/DocumentView';
@@ -15,6 +16,7 @@ const SnakeGame  = lazy(() => import('./components/SnakeGame'));
 import NotificationBalloon from './components/NotificationBalloon';
 import ContextMenu from './components/ContextMenu';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
+import { fetchCustomCodes } from './lib/firebase';
 import './App.css';
 
 // 偵測觸控裝置
@@ -53,6 +55,7 @@ function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [menuPos, setMenuPos] = useState(null); // { x, y }
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
+  const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
   const notifIdRef = useRef(0);
   const longPressTimer = useRef(null);
   const longPressPos = useRef({ x: 0, y: 0 });
@@ -122,23 +125,56 @@ function App() {
     setTimeout(() => addNotification({ title: '歡迎使用', message: hint, icon: '💡' }), 1200);
   };
 
-  const handleVerifyCode = () => {
-    if (!accessCode) { setErrorMsg('錯誤：請輸入憑證代碼。'); return; }
-    const data = usersDatabase[accessCode];
-    if (data) {
-      playClick();
-      const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-      setGreeting(randomMsg);
-      setPlayerData(data);
-      setErrorMsg('');
-      setStep(1);
-      const hint = isTouchDevice() ? '長按畫面可查看更多功能 →' : '右鍵點擊任意處可查看更多功能 →';
-      setTimeout(() => addNotification({ title: '系統通知', message: `${data.name}，你的陣營任務已解鎖！`, icon: '🎯' }), 1200);
-      setTimeout(() => addNotification({ title: '提示', message: hint, icon: '💡' }), 2400);
-    } else {
-      playError();
-      setErrorMsg('錯誤：查無此憑證代碼，請重新輸入。');
+  const loginUser = (data) => {
+    playClick();
+    const randomMsg = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+    setGreeting(randomMsg);
+    setPlayerData(data);
+    setErrorMsg('');
+    setStep(1);
+    const hint = isTouchDevice() ? '長按畫面可查看更多功能 →' : '右鍵點擊任意處可查看更多功能 →';
+    setTimeout(() => addNotification({ title: '系統通知', message: `${data.name}，你的陣營任務已解鎖！`, icon: '🎯' }), 1200);
+    setTimeout(() => addNotification({ title: '提示', message: hint, icon: '💡' }), 2400);
+  };
+
+  const handleVerifyCode = async () => {
+    const code = accessCode.trim().toUpperCase();
+    if (!code) { setErrorMsg('錯誤：請輸入憑證代碼。'); return; }
+
+    setErrorMsg('');
+    let customCodes;
+    try {
+      customCodes = await fetchCustomCodes();
+    } catch {
+      setErrorMsg('錯誤：無法連線驗證，請稍後再試。');
+      return;
     }
+
+    // 1. 直接比對原始代碼
+    const directData = usersDatabase[code];
+    if (directData) {
+      if (customCodes[code]) {
+        // 已設定自訂代碼，直接登入
+        loginUser(directData);
+      } else {
+        // 第一次登入，顯示設定代碼 modal
+        setCustomCodeModal({ originalCode: code, data: directData, customCodes });
+      }
+      return;
+    }
+
+    // 2. 比對自訂代碼（反向查找）
+    const originalCode = Object.entries(customCodes).find(([, v]) => v === code)?.[0];
+    if (originalCode) {
+      const originalData = usersDatabase[originalCode];
+      if (originalData) {
+        loginUser(originalData);
+        return;
+      }
+    }
+
+    playError();
+    setErrorMsg('錯誤：查無此憑證代碼，請重新輸入。');
   };
 
   const handleRefresh = async () => {
@@ -315,6 +351,20 @@ function App() {
 
         <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} />
       </div>
+
+      {/* 自訂登入代碼 modal（第一次登入） */}
+      {customCodeModal && (
+        <CustomCodeModal
+          originalCode={customCodeModal.originalCode}
+          usersDatabase={usersDatabase}
+          existingCustomCodes={customCodeModal.customCodes}
+          onSuccess={(newCode) => {
+            setCustomCodeModal(null);
+            setAccessCode(newCode);
+            loginUser(customCodeModal.data);
+          }}
+        />
+      )}
 
       {/* 通知氣球 */}
       <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
