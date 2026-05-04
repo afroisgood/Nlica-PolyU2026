@@ -46,6 +46,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
       if (!data) { setScores([]); return; }
       const list = Object.entries(data)
         .map(([key, v]) => ({ key, ...v }))
+        .filter((s) => s.name && s.score > 0)
         .sort((a, b) => b.score - a.score);
       setScores(list);
     });
