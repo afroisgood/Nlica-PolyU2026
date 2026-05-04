@@ -538,14 +538,40 @@ function AdminPage() {
             </div>
             {rootDocs.map((doc, di) => {
               const isSelected = selectedFolderIdx === -1 && selectedDocIdx === di;
+              const isDragging = dragItem?.type === 'rootdoc' && dragItem?.di === di;
+              const isOver     = dragOver?.type === 'rootdoc' && dragOver?.di === di && !isDragging;
               return (
-                <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, position: 'relative' }}>
+                <div key={doc.id} draggable
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, position: 'relative',
+                    opacity: isDragging ? 0.35 : 1,
+                    borderTop: isOver ? '2px solid #000080' : '2px solid transparent',
+                    cursor: 'grab', userSelect: 'none',
+                  }}
+                  onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'rootdoc', di }); }}
+                  onDragEnter={() => { if (dragItem?.type === 'rootdoc') setDragOver({ type: 'rootdoc', di }); }}
+                  onDragOver={e => { if (dragItem?.type === 'rootdoc') e.preventDefault(); }}
+                  onDragEnd={() => { setDragItem(null); setDragOver(null); }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    if (!dragItem || dragItem.type !== 'rootdoc' || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
+                    setRootDocs(prev => {
+                      const arr = [...prev];
+                      const [moved] = arr.splice(dragItem.di, 1);
+                      arr.splice(di, 0, moved);
+                      return arr;
+                    });
+                    if (isSelected) setSelectedDocIdx(di);
+                    setDragItem(null); setDragOver(null);
+                  }}
+                >
+                  <span style={{ opacity: 0.4, fontSize: '0.7rem', flexShrink: 0 }}>⠿</span>
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <div
                       className={`pixel-icon ${doc.icon || 'icon-scroll'}`}
                       style={{ width: 16, height: 16, cursor: 'pointer' }}
                       title="點擊更換圖示"
-                      onClick={() => setIconPickerKey(iconPickerKey === `root_${di}` ? null : `root_${di}`)}
+                      onClick={e => { e.stopPropagation(); setIconPickerKey(iconPickerKey === `root_${di}` ? null : `root_${di}`); }}
                     />
                     {iconPickerKey === `root_${di}` && (
                       <IconPicker
@@ -558,18 +584,18 @@ function AdminPage() {
                   <div
                     className="win95-file-item"
                     style={{
-                      flex: 1, fontSize: '0.8rem', padding: '3px 6px', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      flex: 1, fontSize: '0.8rem', padding: '3px 6px', cursor: 'grab', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       backgroundColor: isSelected ? '#000080' : 'transparent',
                       color: isSelected ? 'white' : 'black',
                     }}
-                    onClick={() => { setSelectedFolderIdx(-1); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
+                    onClick={e => { e.stopPropagation(); setSelectedFolderIdx(-1); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
                   >
                     {doc.title}
                   </div>
                   <button
                     style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px' }}
                     title="刪除"
-                    onClick={() => deleteRootDoc(di)}
+                    onClick={e => { e.stopPropagation(); deleteRootDoc(di); }}
                   >✕</button>
                 </div>
               );
