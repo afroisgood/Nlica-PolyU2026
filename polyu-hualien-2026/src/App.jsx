@@ -14,15 +14,9 @@ const AdminPage  = lazy(() => import('./components/AdminPage'));
 const MapWindow  = lazy(() => import('./components/MapWindow'));
 const SnakeGame  = lazy(() => import('./components/SnakeGame'));
 import NotificationBalloon from './components/NotificationBalloon';
-import ContextMenu from './components/ContextMenu';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
 import { fetchCustomCodes } from './lib/firebase';
 import './App.css';
-
-// 偵測觸控裝置
-const isTouchDevice = () =>
-  typeof window !== 'undefined' &&
-  (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
 
 // 固定的各組任務資料夾（內容依登入者動態產生，不放 content.json）
 
@@ -44,13 +38,9 @@ function App() {
   const [showMap, setShowMap] = useState(false);
   const [showSnake, setShowSnake] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [showAbout, setShowAbout] = useState(false);
-  const [menuPos, setMenuPos] = useState(null); // { x, y }
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
   const notifIdRef = useRef(0);
-  const longPressTimer = useRef(null);
-  const longPressPos = useRef({ x: 0, y: 0 });
 
   const addNotification = (notif) => {
     const id = ++notifIdRef.current;
@@ -111,8 +101,6 @@ function App() {
     setGreeting(randomMsg);
     setIsGuest(true);
     setStep(1);
-    const hint = isTouchDevice() ? '長按畫面可查看更多功能 →' : '右鍵點擊任意處可查看更多功能 →';
-    setTimeout(() => addNotification({ title: '歡迎使用', message: hint, icon: '💡' }), 1200);
   };
 
   const loginUser = (data) => {
@@ -122,9 +110,7 @@ function App() {
     setPlayerData(data);
     setErrorMsg('');
     setStep(1);
-    const hint = isTouchDevice() ? '長按畫面可查看更多功能 →' : '右鍵點擊任意處可查看更多功能 →';
     setTimeout(() => addNotification({ title: '系統通知', message: `${data.name}，你的陣營任務已解鎖！`, icon: '🎯' }), 1200);
-    setTimeout(() => addNotification({ title: '提示', message: hint, icon: '💡' }), 2400);
   };
 
   const handleVerifyCode = async () => {
@@ -221,29 +207,6 @@ function App() {
     setSoundOn(next);
   };
 
-  const contextMenuItems = [
-    { icon: soundOn ? '🔊' : '🔇', label: `音效：${soundOn ? '開' : '關'}`, action: handleToggleSound },
-    { separator: true },
-    { icon: 'ℹ️', label: '關於此系統', action: () => setShowAbout(true) },
-  ];
-
-  // 桌面：右鍵
-  const handleContextMenu = (e) => {
-    e.preventDefault();
-    setMenuPos({ x: e.clientX, y: e.clientY });
-  };
-
-  // 行動：長按 500ms
-  const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    longPressPos.current = { x: touch.clientX, y: touch.clientY };
-    longPressTimer.current = setTimeout(() => {
-      navigator.vibrate?.(40);
-      setMenuPos({ ...longPressPos.current });
-    }, 500);
-  };
-  const handleTouchMove = () => clearTimeout(longPressTimer.current);
-  const handleTouchEnd  = () => clearTimeout(longPressTimer.current);
 
   if (isAdmin) return <Suspense fallback={null}><AdminPage /></Suspense>;
 
@@ -277,11 +240,6 @@ function App() {
     <main className="win95-container">
       <div
         className="win95-window"
-        onContextMenu={handleContextMenu}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onClick={() => setMenuPos(null)}
       >
 
         <div
@@ -390,55 +348,6 @@ function App() {
         {showSnake && <SnakeGame onClose={() => setShowSnake(false)} playerData={playerData} isGuest={isGuest} />}
       </Suspense>
 
-      {/* 全域右鍵 / 長按選單 */}
-      {menuPos && (
-        <ContextMenu
-          x={menuPos.x}
-          y={menuPos.y}
-          items={contextMenuItems}
-          onClose={() => setMenuPos(null)}
-        />
-      )}
-
-      {/* 關於此系統 dialog */}
-      {showAbout && (
-        <div style={{
-          position: 'fixed', inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.35)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 10000,
-        }}
-          onClick={() => setShowAbout(false)}
-        >
-          <div className="win95-window" style={{ width: 320 }} onClick={(e) => e.stopPropagation()}>
-            <div className="win95-title-bar">
-              <span>關於此系統</span>
-              <div className="win95-title-buttons">
-                <div className="win95-btn" onClick={() => setShowAbout(false)}>X</div>
-              </div>
-            </div>
-            <div className="win95-content" style={{ textAlign: 'center', padding: '24px 20px' }}>
-              <div className="pixel-icon icon-robot-head" style={{ margin: '0 auto 12px' }} />
-              <h3 style={{ margin: '0 0 6px' }}>PolyU_Hualien_Tour.exe</h3>
-              <p style={{ margin: '4px 0', fontSize: '0.9rem' }}>版本 2026.05.18</p>
-              <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#555' }}>
-                PolyU × 牛犁協會<br />花蓮豐田社區學習計畫
-              </p>
-              <hr style={{ margin: '14px 0', border: 'none', borderTop: '1px solid #c0c0c0' }} />
-              <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>
-                Built with React + Vite + Firebase
-              </p>
-              <button
-                className="win95-button"
-                style={{ marginTop: 18 }}
-                onClick={() => { playClick(); setShowAbout(false); }}
-              >
-                確定
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
