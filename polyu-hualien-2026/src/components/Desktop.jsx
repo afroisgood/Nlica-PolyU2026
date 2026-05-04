@@ -1,7 +1,7 @@
 // src/components/Desktop.jsx
 import { playFolderOpen, playClick } from '../lib/sounds';
 
-function Desktop({ folders, onOpenFolder, onOpenDiscussion, onOpenMap, onOpenSnake }) {
+function Desktop({ folders, rootDocs = [], onOpenFolder, onOpenRootDoc, onOpenDiscussion, onOpenMap, onOpenSnake }) {
   return (
     <div className="win95-desktop">
       {folders.map((folder) => (
@@ -16,6 +16,21 @@ function Desktop({ folders, onOpenFolder, onOpenDiscussion, onOpenMap, onOpenSna
         >
           <div className={`pixel-icon ${folder.icon}`}></div>
           <span className="win95-icon-text">{folder.title}</span>
+        </div>
+      ))}
+
+      {rootDocs.map((doc) => (
+        <div
+          key={doc.id}
+          className="win95-icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            playClick();
+            onOpenRootDoc(doc);
+          }}
+        >
+          <div className={`pixel-icon ${doc.icon || 'icon-scroll'}`}></div>
+          <span className="win95-icon-text">{doc.title}</span>
         </div>
       ))}
 

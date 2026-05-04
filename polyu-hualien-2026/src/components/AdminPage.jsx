@@ -294,8 +294,9 @@ function AdminPage() {
   const [isAuthed, setIsAuthed]               = useState(false);
   const [activeTab, setActiveTab]             = useState('content');
   const [folders, setFolders]                 = useState([]);
-  const [selectedFolderIdx, setSelectedFolderIdx] = useState(0);
-  const [selectedDocIdx, setSelectedDocIdx]   = useState(0);
+  const [rootDocs, setRootDocs]               = useState([]);
+  const [selectedFolderIdx, setSelectedFolderIdx] = useState(null); // -1 = rootDoc
+  const [selectedDocIdx, setSelectedDocIdx]   = useState(null);
   const [statusMsg, setStatusMsg]             = useState('');
   const [isSaving, setIsSaving]               = useState(false);
   const [toolbarPanel, setToolbarPanel]       = useState(null);
@@ -308,7 +309,8 @@ function AdminPage() {
   const [newFolderIcon, setNewFolderIcon]     = useState('icon-folder');
   const [editingFolderIdx, setEditingFolderIdx] = useState(null);
   const [editingFolderTitle, setEditingFolderTitle] = useState('');
-  const [iconPickerIdx, setIconPickerIdx]     = useState(null);
+  // iconPickerKey: 'folder_{fi}' or 'root_{di}'
+  const [iconPickerKey, setIconPickerKey]     = useState(null);
   const textareaRef = useRef(null);
   const savedSel    = useRef({ start: 0, end: 0, text: '' });
 
@@ -325,6 +327,7 @@ function AdminPage() {
     const text = new TextDecoder('utf-8').decode(bytes);
     const content = JSON.parse(text);
     setFolders(content.folders);
+    setRootDocs(content.rootDocs || []);
     setIsAuthed(true);
     sessionStorage.setItem('admin_pat', token);
   };
@@ -349,7 +352,7 @@ function AdminPage() {
       if (!checkRes.ok) throw new Error('無法取得檔案資訊，請確認 PAT 仍有效。');
       const checkData = await checkRes.json();
 
-      const newContent = JSON.stringify({ folders }, null, 2);
+      const newContent = JSON.stringify({ folders, rootDocs }, null, 2);
       const bytes = new TextEncoder().encode(newContent);
       let binary = '';
       bytes.forEach((b) => (binary += String.fromCharCode(b)));
@@ -371,12 +374,33 @@ function AdminPage() {
   };
 
   const updateDocField = (folderIdx, docIdx, field, value) => {
-    setFolders((prev) => prev.map((f, fi) =>
-      fi !== folderIdx ? f : {
-        ...f,
-        docs: f.docs.map((d, di) => di !== docIdx ? d : { ...d, [field]: value }),
-      }
-    ));
+    if (folderIdx === -1) {
+      setRootDocs((prev) => prev.map((d, i) => i !== docIdx ? d : { ...d, [field]: value }));
+    } else {
+      setFolders((prev) => prev.map((f, fi) =>
+        fi !== folderIdx ? f : {
+          ...f,
+          docs: f.docs.map((d, di) => di !== docIdx ? d : { ...d, [field]: value }),
+        }
+      ));
+    }
+  };
+
+  const addRootDoc = () => {
+    const newDoc = { id: `rootdoc_${Date.now()}`, title: '📄 新文件.txt', icon: 'icon-scroll', content: '' };
+    setRootDocs((prev) => [...prev, newDoc]);
+    setSelectedFolderIdx(-1);
+    setSelectedDocIdx(rootDocs.length);
+    setToolbarPanel(null);
+  };
+
+  const deleteRootDoc = (di) => {
+    if (!window.confirm('確定刪除這份根目錄文件？')) return;
+    setRootDocs((prev) => prev.filter((_, i) => i !== di));
+    if (selectedFolderIdx === -1 && selectedDocIdx === di) {
+      setSelectedFolderIdx(null);
+      setSelectedDocIdx(null);
+    }
   };
 
   const addFolder = () => {
@@ -494,8 +518,9 @@ function AdminPage() {
   }
 
   // ── 內容管理（主頁）────────────────────────────────────────────
-  const currentFolder = folders[selectedFolderIdx];
-  const currentDoc    = currentFolder?.docs[selectedDocIdx];
+  const currentDoc = selectedFolderIdx === -1
+    ? rootDocs[selectedDocIdx]
+    : folders[selectedFolderIdx]?.docs[selectedDocIdx];
 
   return (
     <main style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#008080', padding: '12px', gap: '12px', fontFamily: "'DotGothic16', 'Courier New', monospace" }}>
@@ -504,6 +529,58 @@ function AdminPage() {
       <div className="win95-window" style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="win95-title-bar"><span>目錄</span></div>
         <div style={{ padding: 8, overflowY: 'auto', flexGrow: 1 }}>
+
+          {/* 桌面文件（根目錄） */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: '0.75rem', color: '#555', fontWeight: 'bold', marginBottom: 4, paddingBottom: 2, borderBottom: '1px dashed #aaa' }}>
+              📁 桌面文件
+            </div>
+            {rootDocs.map((doc, di) => {
+              const isSelected = selectedFolderIdx === -1 && selectedDocIdx === di;
+              return (
+                <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, position: 'relative' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div
+                      className={`pixel-icon ${doc.icon || 'icon-scroll'}`}
+                      style={{ width: 16, height: 16, cursor: 'pointer' }}
+                      title="點擊更換圖示"
+                      onClick={() => setIconPickerKey(iconPickerKey === `root_${di}` ? null : `root_${di}`)}
+                    />
+                    {iconPickerKey === `root_${di}` && (
+                      <IconPicker
+                        value={doc.icon || 'icon-scroll'}
+                        onChange={(v) => updateDocField(-1, di, 'icon', v)}
+                        onClose={() => setIconPickerKey(null)}
+                      />
+                    )}
+                  </div>
+                  <div
+                    className="win95-file-item"
+                    style={{
+                      flex: 1, fontSize: '0.8rem', padding: '3px 6px', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      backgroundColor: isSelected ? '#000080' : 'transparent',
+                      color: isSelected ? 'white' : 'black',
+                    }}
+                    onClick={() => { setSelectedFolderIdx(-1); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
+                  >
+                    {doc.title}
+                  </div>
+                  <button
+                    style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px' }}
+                    title="刪除"
+                    onClick={() => deleteRootDoc(di)}
+                  >✕</button>
+                </div>
+              );
+            })}
+            <div
+              style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
+              onClick={addRootDoc}
+            >
+              ＋ 新增桌面文件
+            </div>
+          </div>
+
           {folders.map((folder, fi) => (
             <div key={folder.key} style={{ marginBottom: 12 }}>
               {/* 資料夾標題列 */}
@@ -513,13 +590,13 @@ function AdminPage() {
                   <div className={`pixel-icon ${folder.icon || 'icon-folder'}`}
                     style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }}
                     title="點擊更換圖示"
-                    onClick={() => setIconPickerIdx(iconPickerIdx === fi ? null : fi)}
+                    onClick={() => setIconPickerKey(iconPickerKey === `folder_${fi}` ? null : `folder_${fi}`)}
                   />
-                  {iconPickerIdx === fi && (
+                  {iconPickerKey === `folder_${fi}` && (
                     <IconPicker
                       value={folder.icon}
                       onChange={(v) => updateFolderField(fi, 'icon', v)}
-                      onClose={() => setIconPickerIdx(null)}
+                      onClose={() => setIconPickerKey(null)}
                     />
                   )}
                 </div>

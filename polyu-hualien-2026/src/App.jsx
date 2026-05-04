@@ -39,6 +39,7 @@ function App() {
   const [isBooting, setIsBooting] = useState(true);
   const [usersDatabase, setUsersDatabase] = useState(null);
   const [contentFolders, setContentFolders] = useState([]);
+  const [rootDocs, setRootDocs] = useState([]);
   const [fetchError, setFetchError] = useState('');
   const [step, setStep] = useState(0);
   const [isGuest, setIsGuest] = useState(false);
@@ -179,12 +180,13 @@ function App() {
 
   const handleRefresh = async () => {
     try {
-      const [users, folders] = await Promise.all([
+      const [users, content] = await Promise.all([
         fetchUsers(),
-        fetch('/content.json').then((r) => r.json()).then((d) => d.folders),
+        fetch('/content.json').then((r) => r.json()),
       ]);
       setUsersDatabase(users);
-      setContentFolders(folders);
+      setContentFolders(content.folders);
+      setRootDocs(content.rootDocs || []);
       addNotification({ title: '系統', message: '資料已重新整理完成。', icon: '🔄' });
     } catch {
       addNotification({ title: '錯誤', message: '重新整理失敗，請稍後再試。', icon: '⚠️' });
@@ -195,11 +197,12 @@ function App() {
     if (isBooting) return;
     Promise.all([
       fetchUsers(),
-      fetch('/content.json').then((r) => r.json()).then((d) => d.folders),
+      fetch('/content.json').then((r) => r.json()),
     ])
-      .then(([users, folders]) => {
+      .then(([users, content]) => {
         setUsersDatabase(users);
-        setContentFolders(folders);
+        setContentFolders(content.folders);
+        setRootDocs(content.rootDocs || []);
       })
       .catch((err) => setFetchError(err.message));
 
@@ -325,16 +328,21 @@ function App() {
                 </button>
               </div>
 
-              {!showDiscussion && currentFolder === null && (
+              {!showDiscussion && currentFolder === null && currentDoc === null && (
                 <Desktop
                   folders={visibleFolders}
+                  rootDocs={rootDocs}
                   onOpenFolder={setCurrentFolderKey}
+                  onOpenRootDoc={setCurrentDoc}
                   onOpenDiscussion={() => setShowDiscussion(true)}
                   onOpenMap={() => setShowMap(true)}
                   onOpenSnake={() => setShowSnake(true)}
                   onLogout={handleLogout}
                   onAbout={() => setShowAbout(true)}
                 />
+              )}
+              {!showDiscussion && currentFolder === null && currentDoc !== null && (
+                <DocumentView doc={currentDoc} onBack={() => setCurrentDoc(null)} />
               )}
               {!showDiscussion && currentFolder !== null && currentDoc === null && (
                 <FolderView folder={currentFolder} onOpenDoc={setCurrentDoc} onBack={() => setCurrentFolderKey(null)} />
