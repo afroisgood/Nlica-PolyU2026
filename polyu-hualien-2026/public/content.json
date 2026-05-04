@@ -185,6 +185,13 @@
         "老師",
         "牛犁夥伴"
       ]
+    },
+    {
+      "type": "doc",
+      "id": "rootdoc_1777881553505",
+      "title": "社區防災地圖.txt",
+      "icon": "icon-pin",
+      "content": "![圖片](https://raw.githubusercontent.com/afroisgood/Nlica-PolyU2026/main/polyu-hualien-2026/public/media/豐田三村防災地圖(統整版).jpg)"
     }
   ]
 }
