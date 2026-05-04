@@ -289,6 +289,11 @@ body {
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="%23000" d="M1 1h10v8H8l-3 3V9H1z"/><path fill="%23ffffff" d="M2 2h8v6H7.5L6 9.5V8H2z"/><path fill="%23000" d="M3 4h6v1H3zm0 2h4v1H3z"/><path fill="%23C0C0C0" d="M7 6h5v5h-2l-1 2-1-2H7z"/><path fill="%23000080" d="M8 7h3v3H9.5L9 11l-.5-1H8z"/></svg>');
 }
 
+/* 防災手冊 📖 */
+.icon-book {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23CC3300" x="1" y="1" width="10" height="14"/><rect fill="%23AA2200" x="1" y="1" width="2" height="14"/><rect fill="%23FFEECC" x="3" y="2" width="8" height="12"/><rect fill="%23CC3300" x="11" y="1" width="4" height="14"/><rect fill="%23FF6644" x="12" y="2" width="2" height="12"/><rect fill="%23AA2200" x="4" y="4" width="5" height="1"/><rect fill="%23AA2200" x="4" y="6" width="5" height="1"/><rect fill="%23AA2200" x="4" y="8" width="5" height="1"/><rect fill="%23AA2200" x="4" y="10" width="3" height="1"/></svg>');
+}
+
 /* === Win95 狀態列 === */
 .win95-statusbar {
   display: flex;

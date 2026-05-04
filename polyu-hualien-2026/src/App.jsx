@@ -10,9 +10,10 @@ import DocumentView from './components/DocumentView';
 import BootScreen from './components/BootScreen';
 import StatusBar from './components/StatusBar';
 import DiscussionBoard from './components/DiscussionBoard';
-const AdminPage  = lazy(() => import('./components/AdminPage'));
-const MapWindow  = lazy(() => import('./components/MapWindow'));
-const SnakeGame  = lazy(() => import('./components/SnakeGame'));
+const AdminPage     = lazy(() => import('./components/AdminPage'));
+const MapWindow     = lazy(() => import('./components/MapWindow'));
+const SnakeGame     = lazy(() => import('./components/SnakeGame'));
+const DisasterBook  = lazy(() => import('./components/DisasterBook'));
 import NotificationBalloon from './components/NotificationBalloon';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
 import { fetchCustomCodes } from './lib/firebase';
@@ -37,6 +38,7 @@ function App() {
   const [showDiscussion, setShowDiscussion] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showSnake, setShowSnake] = useState(false);
+  const [showDisasterBook, setShowDisasterBook] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
@@ -298,6 +300,7 @@ function App() {
                   onOpenDiscussion={() => setShowDiscussion(true)}
                   onOpenMap={() => setShowMap(true)}
                   onOpenSnake={() => setShowSnake(true)}
+                  onOpenDisasterBook={() => setShowDisasterBook(true)}
                   onLogout={handleLogout}
                   onAbout={() => setShowAbout(true)}
                 />
@@ -346,6 +349,11 @@ function App() {
       {/* 貪吃蛇 */}
       <Suspense fallback={null}>
         {showSnake && <SnakeGame onClose={() => setShowSnake(false)} playerData={playerData} isGuest={isGuest} />}
+      </Suspense>
+
+      {/* 防災手冊 */}
+      <Suspense fallback={null}>
+        {showDisasterBook && <DisasterBook onClose={() => setShowDisasterBook(false)} />}
       </Suspense>
 
     </main>
