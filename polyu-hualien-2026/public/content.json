@@ -114,5 +114,12 @@
       ]
     }
   ],
-  "rootDocs": []
+  "rootDocs": [
+    {
+      "id": "rootdoc_1777862760892",
+      "title": "📄 新文件.txt",
+      "icon": "icon-scroll",
+      "content": ""
+    }
+  ]
 }
