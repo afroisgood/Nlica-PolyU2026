@@ -1,6 +1,6 @@
 // src/components/CustomCodeModal.jsx
 import { useState } from 'react';
-import { setCustomCode } from '../lib/firebase';
+import { setCustomCode, fetchCustomCodes } from '../lib/firebase';
 
 const RE_VALID = /^[A-Z0-9]+$/;
 
@@ -29,6 +29,13 @@ function CustomCodeModal({ originalCode, usersDatabase, existingCustomCodes, onS
 
     setSaving(true);
     try {
+      // 提交前即時重新抓取最新自訂代碼，防止兩人同時設定相同代碼
+      const latestCodes = await fetchCustomCodes();
+      if (Object.values(latestCodes).includes(code)) {
+        setErrorMsg('此代碼剛剛已被其他成員搶先使用，請換一個。');
+        setSaving(false);
+        return;
+      }
       await setCustomCode(originalCode, code);
       onSuccess(code);
     } catch {
