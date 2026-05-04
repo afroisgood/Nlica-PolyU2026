@@ -293,25 +293,24 @@ function AdminPage() {
   const [pat, setPat]                         = useState(sessionStorage.getItem('admin_pat') || '');
   const [isAuthed, setIsAuthed]               = useState(false);
   const [activeTab, setActiveTab]             = useState('content');
-  const [folders, setFolders]                 = useState([]);
-  const [rootDocs, setRootDocs]               = useState([]);
-  const [selectedFolderIdx, setSelectedFolderIdx] = useState(null); // -1 = rootDoc
-  const [selectedDocIdx, setSelectedDocIdx]   = useState(null);
+  // items: unified ordered array of { type:'folder'|'doc', ... }
+  const [items, setItems]                     = useState([]);
+  const [selectedItemIdx, setSelectedItemIdx] = useState(null); // index in items
+  const [selectedDocIdx, setSelectedDocIdx]   = useState(null); // index in folder.docs (null for root docs)
   const [statusMsg, setStatusMsg]             = useState('');
   const [isSaving, setIsSaving]               = useState(false);
   const [toolbarPanel, setToolbarPanel]       = useState(null);
   const [showPreview, setShowPreview]         = useState(false);
   const [previewLightbox, setPreviewLightbox] = useState(null);
-  const [dragItem, setDragItem]               = useState(null); // { type:'folder',fi } | { type:'doc',fi,di }
-  const [dragOver, setDragOver]               = useState(null); // same shape
-  const [collapsedFolders, setCollapsedFolders] = useState(new Set());
+  const [dragItem, setDragItem]               = useState(null); // { type:'item',ii } | { type:'doc',ii,di }
+  const [dragOver, setDragOver]               = useState(null);
+  const [collapsedItems, setCollapsedItems]   = useState(new Set());
   const [showNewFolderForm, setShowNewFolderForm] = useState(false);
   const [newFolderTitle, setNewFolderTitle]   = useState('');
   const [newFolderIcon, setNewFolderIcon]     = useState('icon-folder');
-  const [editingFolderIdx, setEditingFolderIdx] = useState(null);
+  const [editingFolderIdx, setEditingFolderIdx] = useState(null); // item index
   const [editingFolderTitle, setEditingFolderTitle] = useState('');
-  // iconPickerKey: 'folder_{fi}' or 'root_{di}'
-  const [iconPickerKey, setIconPickerKey]     = useState(null);
+  const [iconPickerKey, setIconPickerKey]     = useState(null); // 'item_{ii}'
   const textareaRef = useRef(null);
   const savedSel    = useRef({ start: 0, end: 0, text: '' });
 
@@ -327,8 +326,11 @@ function AdminPage() {
     const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, '')), (c) => c.charCodeAt(0));
     const text = new TextDecoder('utf-8').decode(bytes);
     const content = JSON.parse(text);
-    setFolders(content.folders);
-    setRootDocs(content.rootDocs || []);
+    const allItems = content.items || [
+      ...(content.folders || []).map((f) => ({ type: 'folder', ...f })),
+      ...(content.rootDocs || []).map((d) => ({ type: 'doc', ...d })),
+    ];
+    setItems(allItems);
     setIsAuthed(true);
     sessionStorage.setItem('admin_pat', token);
   };
@@ -353,7 +355,7 @@ function AdminPage() {
       if (!checkRes.ok) throw new Error('無法取得檔案資訊，請確認 PAT 仍有效。');
       const checkData = await checkRes.json();
 
-      const newContent = JSON.stringify({ folders, rootDocs }, null, 2);
+      const newContent = JSON.stringify({ items }, null, 2);
       const bytes = new TextEncoder().encode(newContent);
       let binary = '';
       bytes.forEach((b) => (binary += String.fromCharCode(b)));
@@ -374,77 +376,78 @@ function AdminPage() {
     setIsSaving(false);
   };
 
-  const updateDocField = (folderIdx, docIdx, field, value) => {
-    if (folderIdx === -1) {
-      setRootDocs((prev) => prev.map((d, i) => i !== docIdx ? d : { ...d, [field]: value }));
+  const updateItemField = (ii, field, value) => {
+    setItems((prev) => prev.map((item, i) => i !== ii ? item : { ...item, [field]: value }));
+  };
+
+  const updateDocField = (ii, di, field, value) => {
+    if (di === null) {
+      // root doc: item itself is the doc
+      updateItemField(ii, field, value);
     } else {
-      setFolders((prev) => prev.map((f, fi) =>
-        fi !== folderIdx ? f : {
-          ...f,
-          docs: f.docs.map((d, di) => di !== docIdx ? d : { ...d, [field]: value }),
-        }
+      setItems((prev) => prev.map((item, i) =>
+        i !== ii ? item : { ...item, docs: item.docs.map((d, idx) => idx !== di ? d : { ...d, [field]: value }) }
       ));
     }
   };
 
   const addRootDoc = () => {
-    const newDoc = { id: `rootdoc_${Date.now()}`, title: '📄 新文件.txt', icon: 'icon-scroll', content: '' };
-    setRootDocs((prev) => [...prev, newDoc]);
-    setSelectedFolderIdx(-1);
-    setSelectedDocIdx(rootDocs.length);
+    const newDoc = { type: 'doc', id: `rootdoc_${Date.now()}`, title: '📄 新文件.txt', icon: 'icon-scroll', content: '' };
+    setItems((prev) => [...prev, newDoc]);
+    setSelectedItemIdx(items.length);
+    setSelectedDocIdx(null);
     setToolbarPanel(null);
   };
 
-  const deleteRootDoc = (di) => {
-    if (!window.confirm('確定刪除這份根目錄文件？')) return;
-    setRootDocs((prev) => prev.filter((_, i) => i !== di));
-    if (selectedFolderIdx === -1 && selectedDocIdx === di) {
-      setSelectedFolderIdx(null);
-      setSelectedDocIdx(null);
-    }
+  const deleteRootDoc = (ii) => {
+    if (!window.confirm('確定刪除這份桌面文件？')) return;
+    setItems((prev) => prev.filter((_, i) => i !== ii));
+    if (selectedItemIdx === ii) { setSelectedItemIdx(null); setSelectedDocIdx(null); }
   };
 
   const addFolder = () => {
     if (!newFolderTitle.trim()) return;
-    const newFolder = { key: `folder_${Date.now()}`, title: newFolderTitle.trim(), icon: newFolderIcon, docs: [] };
-    setFolders((prev) => [...prev, newFolder]);
-    setSelectedFolderIdx(folders.length);
-    setSelectedDocIdx(0);
+    const newFolder = { type: 'folder', key: `folder_${Date.now()}`, title: newFolderTitle.trim(), icon: newFolderIcon, docs: [] };
+    setItems((prev) => [...prev, newFolder]);
+    setSelectedItemIdx(items.length);
+    setSelectedDocIdx(null);
     setNewFolderTitle('');
     setNewFolderIcon('icon-folder');
     setShowNewFolderForm(false);
   };
 
-  const deleteFolder = (fi) => {
-    if (!window.confirm(`確定刪除「${folders[fi].title}」資料夾及其所有 ${folders[fi].docs.length} 份文件？`)) return;
-    setFolders((prev) => prev.filter((_, i) => i !== fi));
-    setSelectedFolderIdx((prev) => Math.min(prev, Math.max(0, folders.length - 2)));
-    setSelectedDocIdx(0);
+  const deleteFolder = (ii) => {
+    const folder = items[ii];
+    if (!window.confirm(`確定刪除「${folder.title}」資料夾及其所有 ${folder.docs.length} 份文件？`)) return;
+    setItems((prev) => prev.filter((_, i) => i !== ii));
+    if (selectedItemIdx === ii) { setSelectedItemIdx(null); setSelectedDocIdx(null); }
   };
 
-  const updateFolderField = (fi, field, value) => {
-    setFolders((prev) => prev.map((f, i) => i !== fi ? f : { ...f, [field]: value }));
-  };
-
-  const commitFolderTitle = (fi) => {
-    if (editingFolderTitle.trim()) updateFolderField(fi, 'title', editingFolderTitle.trim());
+  const commitFolderTitle = (ii) => {
+    if (editingFolderTitle.trim()) updateItemField(ii, 'title', editingFolderTitle.trim());
     setEditingFolderIdx(null);
   };
 
-  const addDoc = (folderIdx) => {
-    setFolders((prev) => prev.map((f, fi) =>
-      fi !== folderIdx ? f : {
-        ...f,
-        docs: [...f.docs, { id: `doc_${Date.now()}`, title: '📄 新文件.txt', content: '' }],
-      }
+  const addDoc = (ii) => {
+    setItems((prev) => prev.map((item, i) =>
+      i !== ii || item.type !== 'folder' ? item
+        : { ...item, docs: [...item.docs, { id: `doc_${Date.now()}`, title: '📄 新文件.txt', content: '' }] }
     ));
   };
 
-  const deleteDoc = (folderIdx, docIdx) => {
+  const deleteDoc = (ii, di) => {
     if (!window.confirm('確定刪除這份文件？')) return;
-    setFolders((prev) => prev.map((f, fi) =>
-      fi !== folderIdx ? f : { ...f, docs: f.docs.filter((_, di) => di !== docIdx) }
+    setItems((prev) => prev.map((item, i) =>
+      i !== ii || item.type !== 'folder' ? item
+        : { ...item, docs: item.docs.filter((_, idx) => idx !== di) }
     ));
+  };
+
+  const deleteCurrentDoc = () => {
+    const item = items[selectedItemIdx];
+    if (!item) return;
+    if (item.type === 'doc') deleteRootDoc(selectedItemIdx);
+    else deleteDoc(selectedItemIdx, selectedDocIdx);
   };
 
   const captureSelection = (e, panelType) => {
@@ -465,7 +468,7 @@ function AdminPage() {
     const el = textareaRef.current;
     if (!el) return;
     const newValue = buildInsertedValue(el.value, start, end, syntax, '', '');
-    updateDocField(selectedFolderIdx, selectedDocIdx, 'content', newValue);
+    updateDocField(selectedItemIdx, selectedDocIdx, 'content', newValue);
     setToolbarPanel(null);
     setTimeout(() => {
       el.focus();
@@ -519,9 +522,10 @@ function AdminPage() {
   }
 
   // ── 內容管理（主頁）────────────────────────────────────────────
-  const currentDoc = selectedFolderIdx === -1
-    ? rootDocs[selectedDocIdx]
-    : folders[selectedFolderIdx]?.docs[selectedDocIdx];
+  const selectedItem = items[selectedItemIdx];
+  const currentDoc = selectedItem?.type === 'doc'
+    ? selectedItem
+    : selectedItem?.docs?.[selectedDocIdx];
 
   return (
     <main style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#008080', padding: '12px', gap: '12px', fontFamily: "'DotGothic16', 'Courier New', monospace" }}>
@@ -531,188 +535,136 @@ function AdminPage() {
         <div className="win95-title-bar"><span>目錄</span></div>
         <div style={{ padding: 8, overflowY: 'auto', flexGrow: 1 }}>
 
-          {/* 桌面文件（根目錄） */}
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: '0.75rem', color: '#555', fontWeight: 'bold', marginBottom: 4, paddingBottom: 2, borderBottom: '1px dashed #aaa' }}>
-              📁 桌面文件
-            </div>
-            {rootDocs.map((doc, di) => {
-              const isSelected = selectedFolderIdx === -1 && selectedDocIdx === di;
-              const isDragging = dragItem?.type === 'rootdoc' && dragItem?.di === di;
-              const isOver     = dragOver?.type === 'rootdoc' && dragOver?.di === di && !isDragging;
+          {/* 統一 items 列表（資料夾與桌面文件混排，可跨類型拖曳） */}
+          {items.map((item, ii) => {
+            const isItemDrag = dragItem?.type === 'item' && dragItem?.ii === ii;
+            const isItemOver = dragOver?.type === 'item' && dragOver?.ii === ii && dragItem?.type === 'item' && dragItem?.ii !== ii;
+
+            const itemDropHandlers = {
+              onDragEnter: () => { if (dragItem?.type === 'item') setDragOver({ type: 'item', ii }); },
+              onDragOver:  e  => { if (dragItem?.type === 'item') e.preventDefault(); },
+              onDrop: e => {
+                e.preventDefault();
+                if (!dragItem || dragItem.type !== 'item' || dragItem.ii === ii) { setDragItem(null); setDragOver(null); return; }
+                const selKey = selectedItemIdx !== null ? (items[selectedItemIdx]?.key || items[selectedItemIdx]?.id) : null;
+                setItems(prev => {
+                  const arr = [...prev];
+                  const [moved] = arr.splice(dragItem.ii, 1);
+                  arr.splice(ii, 0, moved);
+                  if (selKey) {
+                    const newIdx = arr.findIndex(i => (i.key || i.id) === selKey);
+                    if (newIdx !== -1) setSelectedItemIdx(newIdx);
+                  }
+                  return arr;
+                });
+                setDragItem(null); setDragOver(null);
+              },
+            };
+
+            if (item.type === 'doc') {
+              // ── 桌面文件 ──────────────────────────────────────
+              const isSelected = selectedItemIdx === ii;
               return (
-                <div key={doc.id} draggable
+                <div key={item.id} draggable
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2, position: 'relative',
-                    opacity: isDragging ? 0.35 : 1,
-                    borderTop: isOver ? '2px solid #000080' : '2px solid transparent',
+                    display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, position: 'relative',
+                    opacity: isItemDrag ? 0.35 : 1,
+                    borderTop: isItemOver ? '2px solid #000080' : '2px solid transparent',
                     cursor: 'grab', userSelect: 'none',
                   }}
-                  onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'rootdoc', di }); }}
-                  onDragEnter={() => { if (dragItem?.type === 'rootdoc') setDragOver({ type: 'rootdoc', di }); }}
-                  onDragOver={e => { if (dragItem?.type === 'rootdoc') e.preventDefault(); }}
+                  onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'item', ii }); }}
                   onDragEnd={() => { setDragItem(null); setDragOver(null); }}
-                  onDrop={e => {
-                    e.preventDefault();
-                    if (!dragItem || dragItem.type !== 'rootdoc' || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
-                    setRootDocs(prev => {
-                      const arr = [...prev];
-                      const [moved] = arr.splice(dragItem.di, 1);
-                      arr.splice(di, 0, moved);
-                      return arr;
-                    });
-                    if (isSelected) setSelectedDocIdx(di);
-                    setDragItem(null); setDragOver(null);
-                  }}
+                  {...itemDropHandlers}
                 >
                   <span style={{ opacity: 0.4, fontSize: '0.7rem', flexShrink: 0 }}>⠿</span>
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div
-                      className={`pixel-icon ${doc.icon || 'icon-scroll'}`}
+                    <div className={`pixel-icon ${item.icon || 'icon-scroll'}`}
                       style={{ width: 16, height: 16, cursor: 'pointer' }}
                       title="點擊更換圖示"
-                      onClick={e => { e.stopPropagation(); setIconPickerKey(iconPickerKey === `root_${di}` ? null : `root_${di}`); }}
+                      onClick={e => { e.stopPropagation(); setIconPickerKey(iconPickerKey === `item_${ii}` ? null : `item_${ii}`); }}
                     />
-                    {iconPickerKey === `root_${di}` && (
-                      <IconPicker
-                        value={doc.icon || 'icon-scroll'}
-                        onChange={(v) => updateDocField(-1, di, 'icon', v)}
-                        onClose={() => setIconPickerKey(null)}
-                      />
+                    {iconPickerKey === `item_${ii}` && (
+                      <IconPicker value={item.icon || 'icon-scroll'}
+                        onChange={v => updateItemField(ii, 'icon', v)}
+                        onClose={() => setIconPickerKey(null)} />
                     )}
                   </div>
-                  <div
-                    className="win95-file-item"
+                  <div className="win95-file-item"
                     style={{
-                      flex: 1, fontSize: '0.8rem', padding: '3px 6px', cursor: 'grab', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      flex: 1, fontSize: '0.8rem', padding: '3px 6px', cursor: 'grab',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       backgroundColor: isSelected ? '#000080' : 'transparent',
                       color: isSelected ? 'white' : 'black',
                     }}
-                    onClick={e => { e.stopPropagation(); setSelectedFolderIdx(-1); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
+                    onClick={e => { e.stopPropagation(); setSelectedItemIdx(ii); setSelectedDocIdx(null); setStatusMsg(''); setToolbarPanel(null); }}
                   >
-                    {doc.title}
+                    {item.title}
                   </div>
-                  <button
-                    style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px' }}
-                    title="刪除"
-                    onClick={e => { e.stopPropagation(); deleteRootDoc(di); }}
-                  >✕</button>
+                  <button style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px' }}
+                    title="刪除" onClick={e => { e.stopPropagation(); deleteRootDoc(ii); }}>✕</button>
                 </div>
               );
-            })}
-            <div
-              style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
-              onClick={addRootDoc}
-            >
-              ＋ 新增桌面文件
-            </div>
-          </div>
+            }
 
-          {folders.map((folder, fi) => {
-            const isCollapsed   = collapsedFolders.has(folder.key);
-            const isFolderDrag  = dragItem?.type === 'folder' && dragItem?.fi === fi;
-            const isFolderOver  = dragOver?.type === 'folder' && dragOver?.fi === fi && dragItem?.type === 'folder' && dragItem?.fi !== fi;
+            // ── 資料夾 ────────────────────────────────────────
+            const isCollapsed = collapsedItems.has(item.key);
             return (
-              <div key={folder.key}
+              <div key={item.key}
                 style={{
                   marginBottom: 8,
-                  opacity: isFolderDrag ? 0.35 : 1,
-                  borderTop: isFolderOver ? '2px solid #000080' : '2px solid transparent',
+                  opacity: isItemDrag ? 0.35 : 1,
+                  borderTop: isItemOver ? '2px solid #000080' : '2px solid transparent',
                 }}
-                onDragEnter={() => { if (dragItem?.type === 'folder') setDragOver({ type: 'folder', fi }); }}
-                onDragOver={e => { if (dragItem?.type === 'folder') e.preventDefault(); }}
-                onDrop={e => {
-                  e.preventDefault();
-                  if (!dragItem || dragItem.type !== 'folder' || dragItem.fi === fi) { setDragItem(null); setDragOver(null); return; }
-                  const selectedKey = selectedFolderIdx >= 0 ? folders[selectedFolderIdx]?.key : null;
-                  setFolders(prev => {
-                    const arr = [...prev];
-                    const [moved] = arr.splice(dragItem.fi, 1);
-                    arr.splice(fi, 0, moved);
-                    if (selectedKey) {
-                      const newIdx = arr.findIndex(f => f.key === selectedKey);
-                      if (newIdx !== -1) setSelectedFolderIdx(newIdx);
-                    }
-                    return arr;
-                  });
-                  setDragItem(null); setDragOver(null);
-                }}
+                {...itemDropHandlers}
               >
-                {/* 資料夾標題列 - 可拖曳 */}
-                <div
-                  draggable
-                  onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'folder', fi }); }}
+                <div draggable
+                  onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'item', ii }); }}
                   onDragEnd={() => { setDragItem(null); setDragOver(null); }}
                   style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, position: 'relative', cursor: 'grab', userSelect: 'none' }}
                 >
-                  {/* 開合箭頭 */}
-                  <span
-                    style={{ flexShrink: 0, fontSize: '0.65rem', width: 12, textAlign: 'center', cursor: 'pointer', color: '#555' }}
+                  <span style={{ flexShrink: 0, fontSize: '0.65rem', width: 12, textAlign: 'center', cursor: 'pointer', color: '#555' }}
                     title={isCollapsed ? '展開' : '收合'}
                     onClick={e => {
                       e.stopPropagation();
-                      setCollapsedFolders(prev => {
-                        const next = new Set(prev);
-                        if (next.has(folder.key)) next.delete(folder.key); else next.add(folder.key);
-                        return next;
-                      });
-                    }}
-                  >
+                      setCollapsedItems(prev => { const n = new Set(prev); if (n.has(item.key)) n.delete(item.key); else n.add(item.key); return n; });
+                    }}>
                     {isCollapsed ? '▶' : '▼'}
                   </span>
-
-                  {/* 圖示按鈕 */}
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div className={`pixel-icon ${folder.icon || 'icon-folder'}`}
+                    <div className={`pixel-icon ${item.icon || 'icon-folder'}`}
                       style={{ width: 18, height: 18, cursor: 'pointer' }}
                       title="點擊更換圖示"
-                      onClick={e => { e.stopPropagation(); setIconPickerKey(iconPickerKey === `folder_${fi}` ? null : `folder_${fi}`); }}
+                      onClick={e => { e.stopPropagation(); setIconPickerKey(iconPickerKey === `item_${ii}` ? null : `item_${ii}`); }}
                     />
-                    {iconPickerKey === `folder_${fi}` && (
-                      <IconPicker
-                        value={folder.icon}
-                        onChange={(v) => updateFolderField(fi, 'icon', v)}
-                        onClose={() => setIconPickerKey(null)}
-                      />
+                    {iconPickerKey === `item_${ii}` && (
+                      <IconPicker value={item.icon || 'icon-folder'}
+                        onChange={v => updateItemField(ii, 'icon', v)}
+                        onClose={() => setIconPickerKey(null)} />
                     )}
                   </div>
-
-                  {/* 可點擊改名的標題 */}
-                  {editingFolderIdx === fi ? (
-                    <input
-                      autoFocus
-                      value={editingFolderTitle}
-                      onChange={(e) => setEditingFolderTitle(e.target.value)}
-                      onBlur={() => commitFolderTitle(fi)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') commitFolderTitle(fi); if (e.key === 'Escape') setEditingFolderIdx(null); }}
+                  {editingFolderIdx === ii ? (
+                    <input autoFocus value={editingFolderTitle}
+                      onChange={e => setEditingFolderTitle(e.target.value)}
+                      onBlur={() => commitFolderTitle(ii)}
+                      onKeyDown={e => { if (e.key === 'Enter') commitFolderTitle(ii); if (e.key === 'Escape') setEditingFolderIdx(null); }}
                       style={{ flex: 1, fontSize: '0.82rem', padding: '1px 4px', fontFamily: 'inherit' }}
-                      onClick={e => e.stopPropagation()}
-                    />
+                      onClick={e => e.stopPropagation()} />
                   ) : (
-                    <span
-                      style={{ flex: 1, fontWeight: 'bold', fontSize: '0.85rem', color: '#000080', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    <span style={{ flex: 1, fontWeight: 'bold', fontSize: '0.85rem', color: '#000080', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                       title="點擊改名"
-                      onClick={e => { e.stopPropagation(); setEditingFolderIdx(fi); setEditingFolderTitle(folder.title); }}
-                    >
-                      {folder.title}
+                      onClick={e => { e.stopPropagation(); setEditingFolderIdx(ii); setEditingFolderTitle(item.title); }}>
+                      {item.title}
                     </span>
                   )}
-
-                  {/* 刪除資料夾 */}
-                  <button
-                    style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1 }}
-                    title="刪除資料夾"
-                    onClick={e => { e.stopPropagation(); deleteFolder(fi); }}
-                  >✕</button>
+                  <button style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1 }}
+                    title="刪除資料夾" onClick={e => { e.stopPropagation(); deleteFolder(ii); }}>✕</button>
                 </div>
-
-                {/* 文件清單（收合時隱藏） */}
                 {!isCollapsed && (
                   <>
-                    {folder.docs.map((doc, di) => {
-                      const isSelected = selectedFolderIdx === fi && selectedDocIdx === di;
-                      const isDragging = dragItem?.type === 'doc' && dragItem?.fi === fi && dragItem?.di === di;
-                      const isOver     = dragOver?.type === 'doc' && dragOver?.fi === fi && dragOver?.di === di && !isDragging;
+                    {(item.docs || []).map((doc, di) => {
+                      const isSelected = selectedItemIdx === ii && selectedDocIdx === di;
+                      const isDragging = dragItem?.type === 'doc' && dragItem?.ii === ii && dragItem?.di === di;
+                      const isOver     = dragOver?.type === 'doc' && dragOver?.ii === ii && dragOver?.di === di && !isDragging;
                       return (
                         <div key={doc.id} className="win95-file-item" draggable
                           style={{
@@ -723,20 +675,20 @@ function AdminPage() {
                             borderTop: isOver ? '2px solid #000080' : '2px solid transparent',
                             userSelect: 'none',
                           }}
-                          onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
-                          onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'doc', fi, di }); }}
-                          onDragEnter={() => { if (dragItem?.type === 'doc') setDragOver({ type: 'doc', fi, di }); }}
+                          onClick={() => { setSelectedItemIdx(ii); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
+                          onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'doc', ii, di }); }}
+                          onDragEnter={() => { if (dragItem?.type === 'doc') setDragOver({ type: 'doc', ii, di }); }}
                           onDragOver={e => { if (dragItem?.type === 'doc') e.preventDefault(); }}
                           onDragEnd={() => { setDragItem(null); setDragOver(null); }}
                           onDrop={e => {
                             e.preventDefault();
-                            if (!dragItem || dragItem.type !== 'doc' || dragItem.fi !== fi || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
-                            setFolders(prev => prev.map((f, idx) => {
-                              if (idx !== fi) return f;
-                              const docs = [...f.docs];
+                            if (!dragItem || dragItem.type !== 'doc' || dragItem.ii !== ii || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
+                            setItems(prev => prev.map((itm, i) => {
+                              if (i !== ii || itm.type !== 'folder') return itm;
+                              const docs = [...itm.docs];
                               const [moved] = docs.splice(dragItem.di, 1);
                               docs.splice(di, 0, moved);
-                              return { ...f, docs };
+                              return { ...itm, docs };
                             }));
                             if (isSelected) setSelectedDocIdx(di);
                             setDragItem(null); setDragOver(null);
@@ -748,7 +700,7 @@ function AdminPage() {
                       );
                     })}
                     <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
-                      onClick={() => { addDoc(fi); setSelectedFolderIdx(fi); setSelectedDocIdx(folders[fi].docs.length); setToolbarPanel(null); }}>
+                      onClick={() => { addDoc(ii); setSelectedItemIdx(ii); setSelectedDocIdx((item.docs || []).length); setToolbarPanel(null); }}>
                       ＋ 新增文件
                     </div>
                   </>
@@ -757,24 +709,25 @@ function AdminPage() {
             );
           })}
 
-          {/* 新增資料夾 */}
-          {showNewFolderForm ? (
-            <div style={{ border: '2px solid #000080', backgroundColor: '#eef', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {/* 新增按鈕 */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+            <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#000080', cursor: 'pointer', fontWeight: 'bold' }}
+              onClick={() => setShowNewFolderForm(true)}>＋ 資料夾</div>
+            <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
+              onClick={addRootDoc}>＋ 桌面文件</div>
+          </div>
+
+          {showNewFolderForm && (
+            <div style={{ border: '2px solid #000080', backgroundColor: '#eef', padding: 8, display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#000080' }}>新增資料夾</div>
-              <input
-                autoFocus
-                className="win95-input"
-                placeholder="資料夾名稱"
-                value={newFolderTitle}
-                onChange={(e) => setNewFolderTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') addFolder(); if (e.key === 'Escape') setShowNewFolderForm(false); }}
-                style={{ fontSize: '0.82rem', padding: '3px 6px', width: '100%', boxSizing: 'border-box', maxWidth: '100%', marginTop: 0 }}
-              />
+              <input autoFocus className="win95-input" placeholder="資料夾名稱"
+                value={newFolderTitle} onChange={e => setNewFolderTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addFolder(); if (e.key === 'Escape') setShowNewFolderForm(false); }}
+                style={{ fontSize: '0.82rem', padding: '3px 6px', width: '100%', boxSizing: 'border-box', maxWidth: '100%', marginTop: 0 }} />
               <div style={{ fontSize: '0.78rem', color: '#555' }}>選擇圖示：</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {FOLDER_ICONS.map((ic) => (
-                  <div key={ic.value} title={ic.label}
-                    onClick={() => setNewFolderIcon(ic.value)}
+                {FOLDER_ICONS.map(ic => (
+                  <div key={ic.value} title={ic.label} onClick={() => setNewFolderIcon(ic.value)}
                     style={{ cursor: 'pointer', padding: 4, border: newFolderIcon === ic.value ? '2px solid #000080' : '2px solid transparent', backgroundColor: newFolderIcon === ic.value ? '#d0d8ff' : 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <div className={`pixel-icon ${ic.value}`} style={{ width: 22, height: 22 }} />
                     <span style={{ fontSize: '0.58rem' }}>{ic.label}</span>
@@ -785,11 +738,6 @@ function AdminPage() {
                 <button className="win95-button" style={{ fontSize: '0.78rem', padding: '2px 8px', marginTop: 0 }} onClick={addFolder} disabled={!newFolderTitle.trim()}>✅ 建立</button>
                 <button className="win95-button" style={{ fontSize: '0.78rem', padding: '2px 8px', marginTop: 0 }} onClick={() => { setShowNewFolderForm(false); setNewFolderTitle(''); setNewFolderIcon('icon-folder'); }}>取消</button>
               </div>
-            </div>
-          ) : (
-            <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#000080', cursor: 'pointer', fontWeight: 'bold' }}
-              onClick={() => setShowNewFolderForm(true)}>
-              ＋ 新增資料夾
             </div>
           )}
         </div>
@@ -811,7 +759,7 @@ function AdminPage() {
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: 4 }}>檔案標題</label>
                 <input className="win95-input" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   value={currentDoc.title}
-                  onChange={(e) => updateDocField(selectedFolderIdx, selectedDocIdx, 'title', e.target.value)} />
+                  onChange={(e) => updateDocField(selectedItemIdx, selectedDocIdx, 'title', e.target.value)} />
               </div>
 
               <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -848,7 +796,7 @@ function AdminPage() {
                       border: '2px inset #808080', resize: 'none', lineHeight: 1.8,
                     }}
                     value={currentDoc.content || ''}
-                    onChange={(e) => updateDocField(selectedFolderIdx, selectedDocIdx, 'content', e.target.value)}
+                    onChange={(e) => updateDocField(selectedItemIdx, selectedDocIdx, 'content', e.target.value)}
                   />
 
                   {showPreview && (
@@ -873,7 +821,7 @@ function AdminPage() {
                 <button className="win95-button" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? '儲存中...' : '💾 儲存到 GitHub'}
                 </button>
-                <button className="win95-button" style={{ color: 'red' }} onClick={() => deleteDoc(selectedFolderIdx, selectedDocIdx)}>
+                <button className="win95-button" style={{ color: 'red' }} onClick={deleteCurrentDoc}>
                   🗑 刪除此文件
                 </button>
                 {statusMsg && <span style={{ fontWeight: 'bold', color: statusMsg.startsWith('✅') ? 'green' : 'red' }}>{statusMsg}</span>}
