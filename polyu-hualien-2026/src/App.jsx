@@ -178,15 +178,28 @@ function App() {
     setErrorMsg('錯誤：查無此憑證代碼，請重新輸入。');
   };
 
+  const parseContent = (content) => {
+    // 支援新格式 { items } 及舊格式 { folders, rootDocs }
+    const items = content.items || [
+      ...(content.folders || []).map((f) => ({ type: 'folder', ...f })),
+      ...(content.rootDocs || []).map((d) => ({ type: 'doc', ...d })),
+    ];
+    return {
+      folders: items.filter((i) => i.type === 'folder'),
+      rootDocs: items.filter((i) => i.type === 'doc'),
+    };
+  };
+
   const handleRefresh = async () => {
     try {
       const [users, content] = await Promise.all([
         fetchUsers(),
         fetch('/content.json').then((r) => r.json()),
       ]);
+      const { folders, rootDocs } = parseContent(content);
       setUsersDatabase(users);
-      setContentFolders(content.folders);
-      setRootDocs(content.rootDocs || []);
+      setContentFolders(folders);
+      setRootDocs(rootDocs);
       addNotification({ title: '系統', message: '資料已重新整理完成。', icon: '🔄' });
     } catch {
       addNotification({ title: '錯誤', message: '重新整理失敗，請稍後再試。', icon: '⚠️' });
@@ -200,9 +213,10 @@ function App() {
       fetch('/content.json').then((r) => r.json()),
     ])
       .then(([users, content]) => {
+        const { folders, rootDocs } = parseContent(content);
         setUsersDatabase(users);
-        setContentFolders(content.folders);
-        setRootDocs(content.rootDocs || []);
+        setContentFolders(folders);
+        setRootDocs(rootDocs);
       })
       .catch((err) => setFetchError(err.message));
 
