@@ -45,66 +45,72 @@ function DisasterBook({ onClose }) {
     >
       <div
         className="win95-window"
-        style={{ width: 'min(480px, 96vw)', display: 'flex', flexDirection: 'column', maxHeight: '96vh' }}
+        style={{
+          width: 'min(460px, 96vw)',
+          height: 'min(700px, 96dvh)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* 標題列 */}
-        <div className="win95-title-bar">
-          <span>防災手冊.exe — 第 {current + 1} 頁 / 共 {TOTAL_PAGES} 頁</span>
+        <div className="win95-title-bar" style={{ flexShrink: 0 }}>
+          <span>防災手冊.exe</span>
           <div className="win95-title-buttons">
             <div className="win95-btn" onClick={() => { playClick(); onClose(); }}>X</div>
           </div>
         </div>
 
         {/* 圖片區 */}
-        <div style={{ flex: 1, overflow: 'hidden', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
+        <div style={{
+          flex: 1,
+          minHeight: 0,
+          backgroundColor: '#111',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
           <img
             src={pages[current]}
             alt={`第 ${current + 1} 頁`}
-            style={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', display: 'block' }}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
             draggable={false}
           />
         </div>
 
         {/* 控制列 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderTop: '2px solid var(--win95-mid)', gap: '8px' }}>
+        <div style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '6px 8px',
+          borderTop: '2px solid var(--win95-mid)',
+          gap: '8px',
+        }}>
           <button
             className="win95-button"
             onClick={() => { playClick(); goPrev(); }}
             disabled={current === 0}
-            style={{ minWidth: '72px' }}
+            style={{ minWidth: '56px', whiteSpace: 'nowrap' }}
           >
-            ◀ 上一頁
+            ◀ 上頁
           </button>
 
-          {/* 頁碼跳轉 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
-            {Array.from({ length: TOTAL_PAGES }, (_, i) => (
-              <span
-                key={i}
-                onClick={() => { playClick(); setCurrent(i); }}
-                style={{
-                  cursor: 'pointer',
-                  fontWeight: i === current ? 'bold' : 'normal',
-                  textDecoration: i === current ? 'underline' : 'none',
-                  color: i === current ? 'var(--win95-title)' : 'inherit',
-                  fontSize: '0.75rem',
-                }}
-              >
-                {i + 1}
-              </span>
-            ))}
-          </div>
+          <span style={{ fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+            {current + 1} / {TOTAL_PAGES}
+          </span>
 
           <button
             className="win95-button"
             onClick={() => { playClick(); goNext(); }}
             disabled={current === TOTAL_PAGES - 1}
-            style={{ minWidth: '72px' }}
+            style={{ minWidth: '56px', whiteSpace: 'nowrap' }}
           >
-            下一頁 ▶
+            下頁 ▶
           </button>
         </div>
       </div>
