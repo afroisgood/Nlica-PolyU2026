@@ -259,6 +259,35 @@ function InsertPanel({ type, pat, onInsert, onClose }) {
   );
 }
 
+// ── 各組可見度 ────────────────────────────────────────────────────
+const ALL_GROUPS = ['第一組', '第二組', '第三組', '第四組', '第五組', '第六組', '第七組', '老師', '牛犁夥伴'];
+
+function VisibilityPicker({ value = [], onChange }) {
+  const toggle = (g) => onChange(value.includes(g) ? value.filter(x => x !== g) : [...value, g]);
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+        <label style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>各組可見度</label>
+        <span style={{ fontSize: '0.78rem', color: value.length === 0 ? '#006400' : '#a00000' }}>
+          {value.length === 0 ? '（全部可見，包含訪客）' : `僅限：${value.join('、')}`}
+        </span>
+        {value.length > 0 && (
+          <button className="win95-button" style={{ fontSize: '0.72rem', padding: '1px 6px', margin: 0 }}
+            onClick={() => onChange([])}>清除限制</button>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', border: '1px inset #808080', backgroundColor: 'white', padding: '6px 8px' }}>
+        {ALL_GROUPS.map(g => (
+          <label key={g} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: '0.83rem', userSelect: 'none' }}>
+            <input type="checkbox" checked={value.includes(g)} onChange={() => toggle(g)} />
+            {g}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── 可選圖示清單 ─────────────────────────────────────────────────
 const FOLDER_ICONS = [
   { value: 'icon-folder',    label: '資料夾' },
@@ -762,6 +791,11 @@ function AdminPage() {
                   onChange={(e) => updateDocField(selectedItemIdx, selectedDocIdx, 'title', e.target.value)} />
               </div>
 
+              <VisibilityPicker
+                value={currentDoc.visibility || []}
+                onChange={(v) => updateDocField(selectedItemIdx, selectedDocIdx, 'visibility', v)}
+              />
+
               <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: 4 }}>內容</label>
 
@@ -827,8 +861,30 @@ function AdminPage() {
                 {statusMsg && <span style={{ fontWeight: 'bold', color: statusMsg.startsWith('✅') ? 'green' : 'red' }}>{statusMsg}</span>}
               </div>
             </>
+          ) : selectedItem?.type === 'folder' && selectedDocIdx === null ? (
+            <>
+              <p style={{ margin: 0, color: '#555', fontSize: '0.85rem' }}>
+                &gt; 選取資料夾：<strong>{selectedItem.title}</strong>
+              </p>
+              <div>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: 4 }}>資料夾標題</label>
+                <input className="win95-input" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  value={selectedItem.title}
+                  onChange={(e) => updateItemField(selectedItemIdx, 'title', e.target.value)} />
+              </div>
+              <VisibilityPicker
+                value={selectedItem.visibility || []}
+                onChange={(v) => updateItemField(selectedItemIdx, 'visibility', v)}
+              />
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button className="win95-button" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? '儲存中...' : '💾 儲存到 GitHub'}
+                </button>
+                {statusMsg && <span style={{ fontWeight: 'bold', color: statusMsg.startsWith('✅') ? 'green' : 'red' }}>{statusMsg}</span>}
+              </div>
+            </>
           ) : (
-            <p>&gt; 請從左側選擇一份文件進行編輯。</p>
+            <p>&gt; 請從左側選擇一份文件或資料夾進行編輯。</p>
           )}
         </div>
 

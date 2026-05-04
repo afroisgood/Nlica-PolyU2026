@@ -73,8 +73,20 @@ function App() {
   // 若網址是 /admin，直接顯示後台
   const isAdmin = window.location.pathname === '/admin';
 
-  // 訪客模式：不顯示「各組學習服務安排」
-  const visibleFolders = isGuest ? contentFolders : [
+  // 從 group 欄位取組別標籤（如「第一組｜傳統工藝」→「第一組」；「老師」→「老師」）
+  const userGroupTag = isGuest || !playerData
+    ? null
+    : (playerData.group || '').split('｜')[0].trim();
+
+  // visibility=[] 全部可見；有值時訪客一律不可見，登入者需符合其中一個群組
+  const canSee = (visibility) => {
+    if (!visibility || visibility.length === 0) return true;
+    if (!userGroupTag) return false;
+    return visibility.includes(userGroupTag);
+  };
+
+  // 合併 content.json 資料夾 + 各組任務資料夾（訪客看不到），再套用可見度過濾
+  const allFolders = isGuest ? contentFolders : [
     ...contentFolders,
     {
       ...GROUP_TASK_FOLDER,
@@ -92,6 +104,12 @@ function App() {
       }),
     },
   ];
+
+  const visibleFolders = allFolders
+    .filter((f) => canSee(f.visibility))
+    .map((f) => ({ ...f, docs: (f.docs || []).filter((d) => canSee(d.visibility)) }));
+
+  const visibleRootDocs = rootDocs.filter((d) => canSee(d.visibility));
 
   const currentFolder = currentFolderKey
     ? visibleFolders.find((f) => f.key === currentFolderKey)
@@ -345,7 +363,7 @@ function App() {
               {!showDiscussion && currentFolder === null && currentDoc === null && (
                 <Desktop
                   folders={visibleFolders}
-                  rootDocs={rootDocs}
+                  rootDocs={visibleRootDocs}
                   onOpenFolder={setCurrentFolderKey}
                   onOpenRootDoc={setCurrentDoc}
                   onOpenDiscussion={() => setShowDiscussion(true)}
