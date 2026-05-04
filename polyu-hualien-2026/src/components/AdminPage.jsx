@@ -302,8 +302,9 @@ function AdminPage() {
   const [toolbarPanel, setToolbarPanel]       = useState(null);
   const [showPreview, setShowPreview]         = useState(false);
   const [previewLightbox, setPreviewLightbox] = useState(null);
-  const [dragItem, setDragItem]               = useState(null);
-  const [dragOver, setDragOver]               = useState(null);
+  const [dragItem, setDragItem]               = useState(null); // { type:'folder',fi } | { type:'doc',fi,di }
+  const [dragOver, setDragOver]               = useState(null); // same shape
+  const [collapsedFolders, setCollapsedFolders] = useState(new Set());
   const [showNewFolderForm, setShowNewFolderForm] = useState(false);
   const [newFolderTitle, setNewFolderTitle]   = useState('');
   const [newFolderIcon, setNewFolderIcon]     = useState('icon-folder');
@@ -581,97 +582,154 @@ function AdminPage() {
             </div>
           </div>
 
-          {folders.map((folder, fi) => (
-            <div key={folder.key} style={{ marginBottom: 12 }}>
-              {/* 資料夾標題列 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, position: 'relative' }}>
-                {/* 圖示按鈕（點擊開圖示選擇器） */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div className={`pixel-icon ${folder.icon || 'icon-folder'}`}
-                    style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }}
-                    title="點擊更換圖示"
-                    onClick={() => setIconPickerKey(iconPickerKey === `folder_${fi}` ? null : `folder_${fi}`)}
-                  />
-                  {iconPickerKey === `folder_${fi}` && (
-                    <IconPicker
-                      value={folder.icon}
-                      onChange={(v) => updateFolderField(fi, 'icon', v)}
-                      onClose={() => setIconPickerKey(null)}
+          {folders.map((folder, fi) => {
+            const isCollapsed   = collapsedFolders.has(folder.key);
+            const isFolderDrag  = dragItem?.type === 'folder' && dragItem?.fi === fi;
+            const isFolderOver  = dragOver?.type === 'folder' && dragOver?.fi === fi && dragItem?.type === 'folder' && dragItem?.fi !== fi;
+            return (
+              <div key={folder.key}
+                style={{
+                  marginBottom: 8,
+                  opacity: isFolderDrag ? 0.35 : 1,
+                  borderTop: isFolderOver ? '2px solid #000080' : '2px solid transparent',
+                }}
+                onDragEnter={() => { if (dragItem?.type === 'folder') setDragOver({ type: 'folder', fi }); }}
+                onDragOver={e => { if (dragItem?.type === 'folder') e.preventDefault(); }}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (!dragItem || dragItem.type !== 'folder' || dragItem.fi === fi) { setDragItem(null); setDragOver(null); return; }
+                  const selectedKey = selectedFolderIdx >= 0 ? folders[selectedFolderIdx]?.key : null;
+                  setFolders(prev => {
+                    const arr = [...prev];
+                    const [moved] = arr.splice(dragItem.fi, 1);
+                    arr.splice(fi, 0, moved);
+                    if (selectedKey) {
+                      const newIdx = arr.findIndex(f => f.key === selectedKey);
+                      if (newIdx !== -1) setSelectedFolderIdx(newIdx);
+                    }
+                    return arr;
+                  });
+                  setDragItem(null); setDragOver(null);
+                }}
+              >
+                {/* 資料夾標題列 - 可拖曳 */}
+                <div
+                  draggable
+                  onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'folder', fi }); }}
+                  onDragEnd={() => { setDragItem(null); setDragOver(null); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4, position: 'relative', cursor: 'grab', userSelect: 'none' }}
+                >
+                  {/* 開合箭頭 */}
+                  <span
+                    style={{ flexShrink: 0, fontSize: '0.65rem', width: 12, textAlign: 'center', cursor: 'pointer', color: '#555' }}
+                    title={isCollapsed ? '展開' : '收合'}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setCollapsedFolders(prev => {
+                        const next = new Set(prev);
+                        if (next.has(folder.key)) next.delete(folder.key); else next.add(folder.key);
+                        return next;
+                      });
+                    }}
+                  >
+                    {isCollapsed ? '▶' : '▼'}
+                  </span>
+
+                  {/* 圖示按鈕 */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div className={`pixel-icon ${folder.icon || 'icon-folder'}`}
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      title="點擊更換圖示"
+                      onClick={e => { e.stopPropagation(); setIconPickerKey(iconPickerKey === `folder_${fi}` ? null : `folder_${fi}`); }}
                     />
+                    {iconPickerKey === `folder_${fi}` && (
+                      <IconPicker
+                        value={folder.icon}
+                        onChange={(v) => updateFolderField(fi, 'icon', v)}
+                        onClose={() => setIconPickerKey(null)}
+                      />
+                    )}
+                  </div>
+
+                  {/* 可點擊改名的標題 */}
+                  {editingFolderIdx === fi ? (
+                    <input
+                      autoFocus
+                      value={editingFolderTitle}
+                      onChange={(e) => setEditingFolderTitle(e.target.value)}
+                      onBlur={() => commitFolderTitle(fi)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') commitFolderTitle(fi); if (e.key === 'Escape') setEditingFolderIdx(null); }}
+                      style={{ flex: 1, fontSize: '0.82rem', padding: '1px 4px', fontFamily: 'inherit' }}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span
+                      style={{ flex: 1, fontWeight: 'bold', fontSize: '0.85rem', color: '#000080', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      title="點擊改名"
+                      onClick={e => { e.stopPropagation(); setEditingFolderIdx(fi); setEditingFolderTitle(folder.title); }}
+                    >
+                      {folder.title}
+                    </span>
                   )}
+
+                  {/* 刪除資料夾 */}
+                  <button
+                    style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1 }}
+                    title="刪除資料夾"
+                    onClick={e => { e.stopPropagation(); deleteFolder(fi); }}
+                  >✕</button>
                 </div>
 
-                {/* 可點擊改名的標題 */}
-                {editingFolderIdx === fi ? (
-                  <input
-                    autoFocus
-                    value={editingFolderTitle}
-                    onChange={(e) => setEditingFolderTitle(e.target.value)}
-                    onBlur={() => commitFolderTitle(fi)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') commitFolderTitle(fi); if (e.key === 'Escape') setEditingFolderIdx(null); }}
-                    style={{ flex: 1, fontSize: '0.82rem', padding: '1px 4px', fontFamily: 'inherit' }}
-                  />
-                ) : (
-                  <span
-                    style={{ flex: 1, fontWeight: 'bold', fontSize: '0.85rem', color: '#000080', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    title="點擊改名"
-                    onClick={() => { setEditingFolderIdx(fi); setEditingFolderTitle(folder.title); }}
-                  >
-                    {folder.title}
-                  </span>
+                {/* 文件清單（收合時隱藏） */}
+                {!isCollapsed && (
+                  <>
+                    {folder.docs.map((doc, di) => {
+                      const isSelected = selectedFolderIdx === fi && selectedDocIdx === di;
+                      const isDragging = dragItem?.type === 'doc' && dragItem?.fi === fi && dragItem?.di === di;
+                      const isOver     = dragOver?.type === 'doc' && dragOver?.fi === fi && dragOver?.di === di && !isDragging;
+                      return (
+                        <div key={doc.id} className="win95-file-item" draggable
+                          style={{
+                            fontSize: '0.8rem', padding: '4px 8px', cursor: 'grab',
+                            backgroundColor: isSelected ? '#000080' : 'transparent',
+                            color: isSelected ? 'white' : 'black',
+                            opacity: isDragging ? 0.35 : 1,
+                            borderTop: isOver ? '2px solid #000080' : '2px solid transparent',
+                            userSelect: 'none',
+                          }}
+                          onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
+                          onDragStart={e => { e.stopPropagation(); setDragItem({ type: 'doc', fi, di }); }}
+                          onDragEnter={() => { if (dragItem?.type === 'doc') setDragOver({ type: 'doc', fi, di }); }}
+                          onDragOver={e => { if (dragItem?.type === 'doc') e.preventDefault(); }}
+                          onDragEnd={() => { setDragItem(null); setDragOver(null); }}
+                          onDrop={e => {
+                            e.preventDefault();
+                            if (!dragItem || dragItem.type !== 'doc' || dragItem.fi !== fi || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
+                            setFolders(prev => prev.map((f, idx) => {
+                              if (idx !== fi) return f;
+                              const docs = [...f.docs];
+                              const [moved] = docs.splice(dragItem.di, 1);
+                              docs.splice(di, 0, moved);
+                              return { ...f, docs };
+                            }));
+                            if (isSelected) setSelectedDocIdx(di);
+                            setDragItem(null); setDragOver(null);
+                          }}
+                        >
+                          <span style={{ marginRight: 4, opacity: 0.4, fontSize: '0.7rem' }}>⠿</span>
+                          {doc.title}
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
+                      onClick={() => { addDoc(fi); setSelectedFolderIdx(fi); setSelectedDocIdx(folders[fi].docs.length); setToolbarPanel(null); }}>
+                      ＋ 新增文件
+                    </div>
+                  </>
                 )}
-
-                {/* 刪除資料夾 */}
-                <button
-                  style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1 }}
-                  title="刪除資料夾"
-                  onClick={() => deleteFolder(fi)}
-                >✕</button>
               </div>
-              {folder.docs.map((doc, di) => {
-                const isSelected = selectedFolderIdx === fi && selectedDocIdx === di;
-                const isDragging = dragItem?.fi === fi && dragItem?.di === di;
-                const isOver     = dragOver?.fi === fi && dragOver?.di === di && !isDragging;
-                return (
-                  <div key={doc.id} className="win95-file-item" draggable
-                    style={{
-                      fontSize: '0.8rem', padding: '4px 8px', cursor: 'grab',
-                      backgroundColor: isSelected ? '#000080' : 'transparent',
-                      color: isSelected ? 'white' : 'black',
-                      opacity: isDragging ? 0.35 : 1,
-                      borderTop: isOver ? '2px solid #000080' : '2px solid transparent',
-                      userSelect: 'none',
-                    }}
-                    onClick={() => { setSelectedFolderIdx(fi); setSelectedDocIdx(di); setStatusMsg(''); setToolbarPanel(null); }}
-                    onDragStart={() => setDragItem({ fi, di })}
-                    onDragEnter={() => setDragOver({ fi, di })}
-                    onDragOver={e => e.preventDefault()}
-                    onDragEnd={() => { setDragItem(null); setDragOver(null); }}
-                    onDrop={e => {
-                      e.preventDefault();
-                      if (!dragItem || dragItem.fi !== fi || dragItem.di === di) { setDragItem(null); setDragOver(null); return; }
-                      setFolders(prev => prev.map((f, idx) => {
-                        if (idx !== fi) return f;
-                        const docs = [...f.docs];
-                        const [moved] = docs.splice(dragItem.di, 1);
-                        docs.splice(di, 0, moved);
-                        return { ...f, docs };
-                      }));
-                      if (isSelected) setSelectedDocIdx(di);
-                      setDragItem(null); setDragOver(null);
-                    }}
-                  >
-                    <span style={{ marginRight: 4, opacity: 0.4, fontSize: '0.7rem' }}>⠿</span>
-                    {doc.title}
-                  </div>
-                );
-              })}
-              <div style={{ fontSize: '0.8rem', padding: '3px 8px', color: '#555', cursor: 'pointer' }}
-                onClick={() => { addDoc(fi); setSelectedFolderIdx(fi); setSelectedDocIdx(folders[fi].docs.length); setToolbarPanel(null); }}>
-                ＋ 新增文件
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* 新增資料夾 */}
           {showNewFolderForm ? (
