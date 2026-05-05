@@ -112,7 +112,6 @@ function App() {
     setPlayerData(data);
     setErrorMsg('');
     setStep(1);
-    setTimeout(() => addNotification({ title: '系統通知', message: `${data.name}，你的陣營任務已解鎖！`, icon: '🎯' }), 1200);
   };
 
   const handleVerifyCode = async () => {

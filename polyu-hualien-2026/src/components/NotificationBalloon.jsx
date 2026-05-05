@@ -350,7 +350,7 @@ function NotificationBalloon({
 
   return (
     <div style={{
-      position: 'absolute', bottom: 30,
+      position: 'absolute', bottom: onLeft ? 110 : 30,
       ...(onLeft ? { left: 8, alignItems: 'flex-start' } : { right: 8, alignItems: 'flex-end' }),
       display: 'flex', flexDirection: 'column',
       gap: 6, zIndex: 10000, pointerEvents: 'none',
