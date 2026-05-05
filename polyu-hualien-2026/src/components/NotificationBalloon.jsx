@@ -115,7 +115,7 @@ function AssistantChar({ mood = 'normal', blink }) {
 }
 
 /* ── 系統通知泡泡（帶藍色標題列） ──────────────────────────── */
-function SystemBubble({ id, title, message, icon = '💬', onDismiss, duration = 5000 }) {
+function SystemBubble({ id, title, message, icon = '💬', onDismiss, duration = 5000, flip = false }) {
   const [fading, setFading] = useState(false);
   useEffect(() => {
     const t1 = setTimeout(() => setFading(true), duration - 400);
@@ -145,14 +145,14 @@ function SystemBubble({ id, title, message, icon = '💬', onDismiss, duration =
         <span style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => onDismiss(id)}>✕</span>
       </div>
       <div style={{ padding: '8px 10px', lineHeight: 1.6 }}>{message}</div>
-      <div style={{ position: 'absolute', bottom: -8, right: 18, width: 0, height: 0, borderLeft: '8px solid transparent', borderTop: '8px solid #c8a000' }} />
-      <div style={{ position: 'absolute', bottom: -6, right: 19, width: 0, height: 0, borderLeft: '6px solid transparent', borderTop: '6px solid #ffffc1' }} />
+      <div style={{ position: 'absolute', bottom: -8, ...(flip ? { left: 18, borderRight: '8px solid transparent' } : { right: 18, borderLeft: '8px solid transparent' }), width: 0, height: 0, borderTop: '8px solid #c8a000' }} />
+      <div style={{ position: 'absolute', bottom: -6, ...(flip ? { left: 19, borderRight: '6px solid transparent' } : { right: 19, borderLeft: '6px solid transparent' }), width: 0, height: 0, borderTop: '6px solid #ffffc1' }} />
     </div>
   );
 }
 
 /* ── 助手自言自語泡泡（輕量，無標題列） ────────────────────── */
-function SpeechBubble({ text, onDone }) {
+function SpeechBubble({ text, onDone, flip = false }) {
   const [fading, setFading] = useState(false);
   useEffect(() => {
     const t1 = setTimeout(() => setFading(true), 3600);
@@ -173,8 +173,8 @@ function SpeechBubble({ text, onDone }) {
       position: 'relative',
     }}>
       {text}
-      <div style={{ position: 'absolute', bottom: -8, right: 18, width: 0, height: 0, borderLeft: '8px solid transparent', borderTop: '8px solid #c8a000' }} />
-      <div style={{ position: 'absolute', bottom: -6, right: 19, width: 0, height: 0, borderLeft: '6px solid transparent', borderTop: '6px solid #ffffc1' }} />
+      <div style={{ position: 'absolute', bottom: -8, ...(flip ? { left: 18, borderRight: '8px solid transparent' } : { right: 18, borderLeft: '8px solid transparent' }), width: 0, height: 0, borderTop: '8px solid #c8a000' }} />
+      <div style={{ position: 'absolute', bottom: -6, ...(flip ? { left: 19, borderRight: '6px solid transparent' } : { right: 19, borderLeft: '6px solid transparent' }), width: 0, height: 0, borderTop: '6px solid #ffffc1' }} />
     </div>
   );
 }
@@ -346,10 +346,13 @@ function NotificationBalloon({
       ? 'assistant-sleepy 3s ease infinite'
       : 'assistant-idle 5s ease infinite';
 
+  const onLeft = assistantContext === 'discussion';
+
   return (
     <div style={{
-      position: 'absolute', bottom: 30, right: 8,
-      display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+      position: 'absolute', bottom: 30,
+      ...(onLeft ? { left: 8, alignItems: 'flex-start' } : { right: 8, alignItems: 'flex-end' }),
+      display: 'flex', flexDirection: 'column',
       gap: 6, zIndex: 10000, pointerEvents: 'none',
     }}>
       {/* 快捷選單 */}
@@ -362,16 +365,17 @@ function NotificationBalloon({
       {/* 助手自言自語（無通知時才顯示） */}
       {speech && !showMenu && notifications.length === 0 && (
         <div style={{ pointerEvents: 'auto' }}>
-          <SpeechBubble text={speech} onDone={() => setSpeech(null)} />
+          <SpeechBubble text={speech} onDone={() => setSpeech(null)} flip={onLeft} />
         </div>
       )}
 
       {/* 系統通知（由下往上堆疊） */}
       <div style={{
-        display: 'flex', flexDirection: 'column-reverse', alignItems: 'flex-end',
+        display: 'flex', flexDirection: 'column-reverse',
+        alignItems: onLeft ? 'flex-start' : 'flex-end',
         gap: 6, pointerEvents: notifications.length ? 'auto' : 'none',
       }}>
-        {notifications.map(n => <SystemBubble key={n.id} {...n} onDismiss={onDismiss} />)}
+        {notifications.map(n => <SystemBubble key={n.id} {...n} onDismiss={onDismiss} flip={onLeft} />)}
       </div>
 
       {/* 角色本體 */}
