@@ -55,6 +55,7 @@ body {
   max-height: 800px;
   display: flex;
   flex-direction: column;
+  position: relative; /* 讓小助手角色可以絕對定位在視窗內 */
 }
 
 /* 深藍色標題列 */

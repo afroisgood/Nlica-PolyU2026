@@ -321,6 +321,9 @@ function App() {
         </div>
 
         <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} />
+
+        {/* 小助手角色（放在視窗內，絕對定位於右下角） */}
+        <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
       </div>
 
       {/* 自訂登入代碼 modal（第一次登入） */}
@@ -336,9 +339,6 @@ function App() {
           }}
         />
       )}
-
-      {/* 通知氣球 */}
-      <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
 
       {/* 互動地圖 */}
       <Suspense fallback={null}>

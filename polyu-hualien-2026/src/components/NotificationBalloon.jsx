@@ -135,9 +135,9 @@ function NotificationBalloon({ notifications, onDismiss }) {
 
   return (
     <div style={{
-      position: 'fixed',
-      bottom: 'calc(8px + var(--safe-bottom, 0px))',
-      right: 10,
+      position: 'absolute',
+      bottom: 30,  /* 狀態列高度約 24px，留 6px 間距 */
+      right: 8,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
