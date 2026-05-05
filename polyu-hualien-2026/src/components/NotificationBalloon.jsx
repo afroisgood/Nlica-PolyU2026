@@ -346,13 +346,12 @@ function NotificationBalloon({
       ? 'assistant-sleepy 3s ease infinite'
       : 'assistant-idle 5s ease infinite';
 
-  const onLeft = assistantContext === 'discussion';
+  const bottomOffset = assistantContext === 'discussion' ? 95 : 30;
 
   return (
     <div style={{
-      position: 'absolute', bottom: onLeft ? 110 : 30,
-      ...(onLeft ? { left: 8, alignItems: 'flex-start' } : { right: 8, alignItems: 'flex-end' }),
-      display: 'flex', flexDirection: 'column',
+      position: 'absolute', bottom: bottomOffset, right: 8,
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
       gap: 6, zIndex: 10000, pointerEvents: 'none',
     }}>
       {/* 快捷選單 */}
@@ -365,17 +364,16 @@ function NotificationBalloon({
       {/* 助手自言自語（無通知時才顯示） */}
       {speech && !showMenu && notifications.length === 0 && (
         <div style={{ pointerEvents: 'auto' }}>
-          <SpeechBubble text={speech} onDone={() => setSpeech(null)} flip={onLeft} />
+          <SpeechBubble text={speech} onDone={() => setSpeech(null)} />
         </div>
       )}
 
       {/* 系統通知（由下往上堆疊） */}
       <div style={{
-        display: 'flex', flexDirection: 'column-reverse',
-        alignItems: onLeft ? 'flex-start' : 'flex-end',
+        display: 'flex', flexDirection: 'column-reverse', alignItems: 'flex-end',
         gap: 6, pointerEvents: notifications.length ? 'auto' : 'none',
       }}>
-        {notifications.map(n => <SystemBubble key={n.id} {...n} onDismiss={onDismiss} flip={onLeft} />)}
+        {notifications.map(n => <SystemBubble key={n.id} {...n} onDismiss={onDismiss} />)}
       </div>
 
       {/* 角色本體 */}
