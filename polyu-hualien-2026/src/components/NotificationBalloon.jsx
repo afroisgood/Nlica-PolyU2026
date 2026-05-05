@@ -350,7 +350,7 @@ function NotificationBalloon({
     <div style={{
       position: 'absolute', bottom: 30, right: 8,
       display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-      gap: 6, zIndex: 9998, pointerEvents: 'none',
+      gap: 6, zIndex: 10000, pointerEvents: 'none',
     }}>
       {/* 快捷選單 */}
       {showMenu && (
