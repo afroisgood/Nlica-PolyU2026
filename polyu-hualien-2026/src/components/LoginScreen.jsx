@@ -16,6 +16,10 @@ function LoginScreen({ accessCode, onAccessCodeChange, onVerify, onGuestEnter, e
         onChange={(e) => onAccessCodeChange(e.target.value.toUpperCase())}
         onKeyDown={handleKeyDown}
         placeholder="例如: POLYU-ART-01"
+        autoCapitalize="characters"
+        autoCorrect="off"
+        autoComplete="off"
+        spellCheck="false"
       />
       <br />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>

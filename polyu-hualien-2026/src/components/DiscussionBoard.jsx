@@ -178,7 +178,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
       </div>
 
       {/* 輸入區 */}
-      <div style={{ marginTop:8 }}>
+      <div style={{ marginTop:8, flexShrink:0 }}>
         {isGuest ? (
           <p style={{ margin:0, color:'#888', fontSize:'0.85rem', textAlign:'center' }}>
             &gt; 訪客模式無法留言，請使用憑證登入後參與討論。
@@ -200,7 +200,8 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
               <button className="win95-button"
                 style={{ alignSelf:'flex-end', padding:'6px 10px', fontSize:'1.1rem',
                   background: showEmoji ? '#000080' : undefined,
-                  color: showEmoji ? '#fff' : undefined }}
+                  color: showEmoji ? '#fff' : undefined,
+                  touchAction: 'manipulation' }}
                 title="插入 Emoji"
                 onClick={() => setShowEmoji(v => !v)}>
                 😊
@@ -209,13 +210,14 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
               <textarea ref={textRef} className="win95-input"
                 style={{ flexGrow:1, resize:'none', fontFamily:'inherit',
                   fontSize:'0.95rem', padding:'6px 8px', lineHeight:1.5, height:60 }}
-                placeholder={`在「${selectedLabel}」留言… (Ctrl+Enter 送出)`}
+                placeholder={`在「${selectedLabel}」留言…`}
                 value={text}
                 onChange={e => setText(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSend(); }}
+                onFocus={() => setTimeout(() => textRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300)}
               />
               <button className="win95-button"
-                style={{ alignSelf:'flex-end', padding:'6px 14px' }}
+                style={{ alignSelf:'flex-end', padding:'6px 14px', touchAction:'manipulation' }}
                 onClick={handleSend} disabled={sending || !text.trim()}>
                 {sending ? '...' : '送出'}
               </button>

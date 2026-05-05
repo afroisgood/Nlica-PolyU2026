@@ -160,7 +160,7 @@ function MapWindow({ onClose }) {
           <button
             className="win95-button"
             style={{
-              fontSize: '0.8rem', padding: '2px 10px',
+              fontSize: '0.8rem', padding: '6px 14px', minHeight: 36, touchAction: 'manipulation',
               backgroundColor: selectedCat === null ? '#000080' : undefined,
               color: selectedCat === null ? '#fff' : undefined,
             }}
@@ -172,7 +172,7 @@ function MapWindow({ onClose }) {
               key={cat.id}
               className="win95-button"
               style={{
-                fontSize: '0.8rem', padding: '2px 10px',
+                fontSize: '0.8rem', padding: '6px 14px', minHeight: 36, touchAction: 'manipulation',
                 backgroundColor: selectedCat === cat.id ? (cat.color || '#999') : undefined,
                 color: selectedCat === cat.id ? '#fff' : undefined,
               }}
@@ -225,7 +225,7 @@ function MapWindow({ onClose }) {
         )}
 
         {/* 地點清單 */}
-        <div style={{ maxHeight: 160, overflowY: 'auto', borderTop: '2px solid #808080' }}>
+        <div style={{ maxHeight: 'clamp(140px, 28vh, 220px)', overflowY: 'auto', borderTop: '2px solid #808080' }}>
           {visible.length === 0 && (
             <div style={{ padding: '12px', textAlign: 'center', fontSize: '0.85rem', color: '#888' }}>
               {locations.length === 0

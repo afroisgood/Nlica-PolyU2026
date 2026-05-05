@@ -75,7 +75,7 @@ function NotificationBalloon({ notifications, onDismiss }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 36,
+      bottom: 'calc(44px + var(--safe-bottom, 0px))',
       right: 12,
       display: 'flex',
       flexDirection: 'column-reverse',

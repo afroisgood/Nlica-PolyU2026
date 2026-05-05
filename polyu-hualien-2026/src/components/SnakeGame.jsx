@@ -231,7 +231,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
     g.nextDir = d;
   };
 
-  const btnStyle = { width: 44, height: 34, fontSize: '1.1rem', padding: 0, textAlign: 'center' };
+  const btnStyle = { width: 56, height: 56, fontSize: '1.5rem', padding: 0, textAlign: 'center', touchAction: 'manipulation' };
 
   // 排行榜：找出目前玩家名次
   const myKey = playerData?.name?.replace(/[.#$[\]/]/g, '_');
