@@ -482,6 +482,7 @@ body {
     width: 100%;
     max-width: 100%;
     padding: 6px;
+    box-sizing: border-box;
   }
 
   .win95-button {
