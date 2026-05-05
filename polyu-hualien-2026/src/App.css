@@ -753,6 +753,20 @@ body {
 .disc-msg-img:hover { opacity: 0.85; }
 
 /* ═══════════════════════════════════════════════════════
+   小助手角色動畫
+   ═══════════════════════════════════════════════════════ */
+@keyframes assistant-bounce {
+  from { transform: translateY(0px); }
+  to   { transform: translateY(-7px); }
+}
+
+@keyframes assistant-idle {
+  0%, 80%, 100% { transform: translateY(0px); }
+  88%           { transform: translateY(-3px); }
+  94%           { transform: translateY(0px); }
+}
+
+/* ═══════════════════════════════════════════════════════
    黑膠播放器 (VinylPlayer)
    ═══════════════════════════════════════════════════════ */
 .vinyl-wrap {
