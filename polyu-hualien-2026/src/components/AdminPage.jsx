@@ -685,6 +685,8 @@ function AdminPage() {
                       {item.title}
                     </span>
                   )}
+                  <button style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1, color: selectedItemIdx === ii && selectedDocIdx === null ? '#000080' : '#888' }}
+                    title="資料夾設定（可見度）" onClick={e => { e.stopPropagation(); setSelectedItemIdx(ii); setSelectedDocIdx(null); setStatusMsg(''); setToolbarPanel(null); }}>⚙</button>
                   <button style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1 }}
                     title="刪除資料夾" onClick={e => { e.stopPropagation(); deleteFolder(ii); }}>✕</button>
                 </div>
@@ -775,7 +777,7 @@ function AdminPage() {
       {/* 右側：編輯區 */}
       <div className="win95-window" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <div className="win95-title-bar">
-          <span>編輯：{currentDoc?.title || '—'}</span>
+          <span>編輯：{currentDoc?.title || (selectedItem?.type === 'folder' && selectedDocIdx === null ? `📁 ${selectedItem.title}` : '—')}</span>
           <div className="win95-title-buttons">
             <div className="win95-btn">_</div><div className="win95-btn">□</div><div className="win95-btn">X</div>
           </div>
