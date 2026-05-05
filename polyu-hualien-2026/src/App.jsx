@@ -203,6 +203,26 @@ function App() {
     return () => clearTimeout(t);
   }, [isBooting]);
 
+  const assistantContext = (() => {
+    if (step === 0) return 'login';
+    if (showSnake) return 'snake';
+    if (showDisasterBook) return 'disaster';
+    if (showMap) return 'map';
+    if (showDiscussion) return 'discussion';
+    if (currentDoc) return 'document';
+    if (currentFolderKey) return 'folder';
+    return 'desktop';
+  })();
+
+  const handleGoDesktop = () => {
+    setCurrentFolderKey(null);
+    setCurrentDoc(null);
+    setShowDiscussion(false);
+    setShowMap(false);
+    setShowSnake(false);
+    setShowDisasterBook(false);
+  };
+
   // ── 右鍵 / 長按選單 ────────────────────────────────────────────
   const handleToggleSound = () => {
     const next = toggleSound();
@@ -323,7 +343,18 @@ function App() {
         <StatusBar path={statusPath} nickname={playerData?.name || accessCode} playerData={playerData} />
 
         {/* 小助手角色（放在視窗內，絕對定位於右下角） */}
-        <NotificationBalloon notifications={notifications} onDismiss={removeNotification} />
+        <NotificationBalloon
+          notifications={notifications}
+          onDismiss={removeNotification}
+          assistantContext={assistantContext}
+          step={step}
+          playerData={playerData}
+          onGoDesktop={handleGoDesktop}
+          onOpenDiscussion={() => { handleGoDesktop(); setShowDiscussion(true); }}
+          onOpenMap={() => setShowMap(true)}
+          soundOn={soundOn}
+          onToggleSound={handleToggleSound}
+        />
       </div>
 
       {/* 自訂登入代碼 modal（第一次登入） */}
