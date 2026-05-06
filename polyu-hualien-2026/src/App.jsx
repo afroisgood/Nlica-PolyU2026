@@ -42,6 +42,7 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
+  const [isVerifying, setIsVerifying] = useState(false);
   const notifIdRef = useRef(0);
 
   const addNotification = (notif) => {
@@ -115,17 +116,21 @@ function App() {
   };
 
   const handleVerifyCode = async () => {
+    if (isVerifying) return;
     const code = accessCode.trim().toUpperCase();
     if (!code) { setErrorMsg('錯誤：請輸入憑證代碼。'); return; }
 
     setErrorMsg('');
+    setIsVerifying(true);
     let customCodes;
     try {
       customCodes = await fetchCustomCodes();
     } catch {
       setErrorMsg('錯誤：無法連線驗證，請稍後再試。');
+      setIsVerifying(false);
       return;
     }
+    setIsVerifying(false);
 
     // 1. 直接比對原始代碼
     const directData = usersDatabase[code];
@@ -283,6 +288,7 @@ function App() {
               onVerify={handleVerifyCode}
               onGuestEnter={handleGuestEnter}
               errorMsg={errorMsg}
+              isVerifying={isVerifying}
             />
           )}
 

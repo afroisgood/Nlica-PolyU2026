@@ -1,5 +1,5 @@
 // src/components/LoginScreen.jsx
-function LoginScreen({ accessCode, onAccessCodeChange, onVerify, onGuestEnter, errorMsg }) {
+function LoginScreen({ accessCode, onAccessCodeChange, onVerify, onGuestEnter, errorMsg, isVerifying }) {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') onVerify();
   };
@@ -20,11 +20,14 @@ function LoginScreen({ accessCode, onAccessCodeChange, onVerify, onGuestEnter, e
         autoCorrect="off"
         autoComplete="off"
         spellCheck="false"
+        disabled={isVerifying}
       />
       <br />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '15px' }}>
-        <button className="win95-button" style={{ margin: 0 }} onClick={onVerify}>驗證憑證</button>
-        <button className="win95-button" style={{ margin: 0, color: '#555' }} onClick={onGuestEnter}>
+        <button className="win95-button" style={{ margin: 0 }} onClick={onVerify} disabled={isVerifying}>
+          {isVerifying ? '驗證中...' : '驗證憑證'}
+        </button>
+        <button className="win95-button" style={{ margin: 0, color: '#555' }} onClick={onGuestEnter} disabled={isVerifying}>
           忽略驗證直接進入
         </button>
       </div>
