@@ -1,7 +1,7 @@
 // src/components/Desktop.jsx
 import { playFolderOpen, playClick } from '../lib/sounds';
 
-function Desktop({ folders, rootDocs = [], onOpenFolder, onOpenRootDoc, onOpenDiscussion, onOpenMap, onOpenSnake, onOpenDisasterBook }) {
+function Desktop({ folders, rootDocs = [], onOpenFolder, onOpenRootDoc, onOpenDiscussion, onOpenMap, onOpenSnake, onOpenDisasterBook, onOpenRoom, playerData }) {
   return (
     <div className="win95-desktop">
       {folders.map((folder) => (
@@ -81,6 +81,20 @@ function Desktop({ folders, rootDocs = [], onOpenFolder, onOpenRootDoc, onOpenDi
         <div className="pixel-icon icon-book"></div>
         <span className="win95-icon-text">防災手冊</span>
       </div>
+
+      {playerData?.room && playerData?.password && (
+        <div
+          className="win95-icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            playClick();
+            onOpenRoom();
+          }}
+        >
+          <div className="pixel-icon icon-door"></div>
+          <span className="win95-icon-text">我的房間</span>
+        </div>
+      )}
     </div>
   );
 }

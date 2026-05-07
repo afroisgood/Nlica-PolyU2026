@@ -14,6 +14,7 @@ const AdminPage     = lazy(() => import('./components/AdminPage'));
 const MapWindow     = lazy(() => import('./components/MapWindow'));
 const SnakeGame     = lazy(() => import('./components/SnakeGame'));
 const DisasterBook  = lazy(() => import('./components/DisasterBook'));
+const HotelRoom     = lazy(() => import('./components/HotelRoom'));
 import NotificationBalloon from './components/NotificationBalloon';
 import { playBoot, playClick, playError, playNotification, toggleSound, isSoundEnabled } from './lib/sounds';
 import { fetchCustomCodes } from './lib/firebase';
@@ -39,6 +40,7 @@ function App() {
   const [showMap, setShowMap] = useState(false);
   const [showSnake, setShowSnake] = useState(false);
   const [showDisasterBook, setShowDisasterBook] = useState(false);
+  const [showRoom, setShowRoom] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
@@ -326,7 +328,9 @@ function App() {
                   onOpenMap={() => setShowMap(true)}
                   onOpenSnake={() => setShowSnake(true)}
                   onOpenDisasterBook={() => setShowDisasterBook(true)}
+                  onOpenRoom={() => setShowRoom(true)}
                   onLogout={handleLogout}
+                  playerData={playerData}
                 />
               )}
               {!showDiscussion && currentFolder === null && currentDoc !== null && (
@@ -389,6 +393,11 @@ function App() {
       {/* 防災手冊 */}
       <Suspense fallback={null}>
         {showDisasterBook && <DisasterBook onClose={() => setShowDisasterBook(false)} />}
+      </Suspense>
+
+      {/* 房間資訊 */}
+      <Suspense fallback={null}>
+        {showRoom && <HotelRoom playerData={playerData} onClose={() => setShowRoom(false)} />}
       </Suspense>
 
     </main>

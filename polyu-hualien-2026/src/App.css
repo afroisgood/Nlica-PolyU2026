@@ -302,6 +302,11 @@ body {
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23CC3300" x="1" y="1" width="10" height="14"/><rect fill="%23AA2200" x="1" y="1" width="2" height="14"/><rect fill="%23FFEECC" x="3" y="2" width="8" height="12"/><rect fill="%23CC3300" x="11" y="1" width="4" height="14"/><rect fill="%23FF6644" x="12" y="2" width="2" height="12"/><rect fill="%23AA2200" x="4" y="4" width="5" height="1"/><rect fill="%23AA2200" x="4" y="6" width="5" height="1"/><rect fill="%23AA2200" x="4" y="8" width="5" height="1"/><rect fill="%23AA2200" x="4" y="10" width="3" height="1"/></svg>');
 }
 
+/* 飯店房門 🚪 */
+.icon-door {
+  background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><rect fill="%23000" x="2" y="1" width="12" height="14"/><rect fill="%23C8A050" x="3" y="2" width="10" height="12"/><rect fill="%23A07828" x="3" y="2" width="1" height="12"/><rect fill="%23E8C070" x="4" y="2" width="1" height="12"/><rect fill="%23A07828" x="12" y="2" width="1" height="12"/><rect fill="%23C8A050" x="5" y="3" width="6" height="4"/><rect fill="%23B89040" x="5" y="3" width="6" height="1"/><rect fill="%23B89040" x="5" y="3" width="1" height="4"/><rect fill="%23D8B060" x="10" y="4" width="1" height="3"/><rect fill="%23D8B060" x="6" y="6" width="5" height="1"/><rect fill="%23C8A050" x="5" y="8" width="6" height="4"/><rect fill="%23B89040" x="5" y="8" width="6" height="1"/><rect fill="%23B89040" x="5" y="8" width="1" height="4"/><rect fill="%23D8B060" x="10" y="9" width="1" height="3"/><rect fill="%23D8B060" x="6" y="11" width="5" height="1"/><rect fill="%23888" x="11" y="8" width="2" height="1"/><rect fill="%23AAA" x="11" y="9" width="2" height="1"/><rect fill="%23666" x="11" y="10" width="2" height="1"/></svg>');
+}
+
 /* === Win95 狀態列 === */
 .win95-statusbar {
   display: flex;

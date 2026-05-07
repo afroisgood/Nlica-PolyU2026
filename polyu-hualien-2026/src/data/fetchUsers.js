@@ -73,6 +73,8 @@ export async function fetchUsers() {
       mainQuest: groupInfo.mainQuest || '',
       gear: groupInfo.gear || '',
       groupSize: groupInfo.groupSize || '',
+      room: member.room || '',
+      password: member.password || '',
     };
   }
   return db;
