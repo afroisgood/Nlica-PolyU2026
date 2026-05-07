@@ -237,7 +237,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
   const myKey = playerData?.name?.replace(/[.#$[\]/]/g, '_');
   const myRank = myKey ? scores.findIndex(s => s.key === myKey) : -1;
   const top10  = scores.slice(0, 10);
-  const showMeExtra = myRank >= 10; // 玩家不在前10，額外顯示
+  const showMeExtra = myRank >= 10 && myRank !== -1; // 玩家不在前10，額外顯示
 
   return (
     <div style={{
@@ -318,7 +318,7 @@ function SnakeGame({ onClose, playerData, isGuest }) {
                   </div>
                 );
               })}
-              {showMeExtra && (
+              {showMeExtra && scores[myRank] && (
                 <>
                   <div style={{ padding: '2px 8px', textAlign: 'center', color: '#aaa', fontSize: '0.75rem' }}>⋯</div>
                   <div style={{
