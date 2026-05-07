@@ -182,11 +182,17 @@ function SpeechBubble({ text, onDone, flip = false }) {
 /* ── 快捷選單（Win95 風格） ─────────────────────────────────── */
 function QuickMenu({ items, onClose }) {
   const ref = useRef(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
-    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    setTimeout(() => document.addEventListener('click', handle), 0);
-    return () => document.removeEventListener('click', handle);
-  }, [onClose]);
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) onCloseRef.current(); };
+    const timerId = setTimeout(() => document.addEventListener('click', handle), 0);
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener('click', handle);
+    };
+  }, []);
 
   return (
     <div ref={ref} style={{
@@ -302,6 +308,9 @@ function NotificationBalloon({
     }, 700);
     return () => clearTimeout(t);
   }, [assistantContext]);
+
+  /* step 切換時關閉選單（防止登出後選單殘留蓋住畫面） */
+  useEffect(() => { setShowMenu(false); }, [step]);
 
   /* 新通知 → surprised */
   useEffect(() => {
