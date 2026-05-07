@@ -184,8 +184,8 @@ function QuickMenu({ items, onClose }) {
   const ref = useRef(null);
   useEffect(() => {
     const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    setTimeout(() => document.addEventListener('pointerdown', handle), 0);
-    return () => document.removeEventListener('pointerdown', handle);
+    setTimeout(() => document.addEventListener('click', handle), 0);
+    return () => document.removeEventListener('click', handle);
   }, [onClose]);
 
   return (
@@ -209,7 +209,7 @@ function QuickMenu({ items, onClose }) {
             style={{ padding: '6px 14px 6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
             onPointerEnter={e => { e.currentTarget.style.backgroundColor = '#000080'; e.currentTarget.style.color = '#fff'; }}
             onPointerLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#000'; }}
-            onPointerDown={e => { e.stopPropagation(); item.action(); onClose(); }}
+            onClick={e => { e.stopPropagation(); item.action(); onClose(); }}
           >
             <span style={{ width: 20, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
             {item.label}

@@ -98,6 +98,10 @@ function App() {
     setCurrentFolderKey(null);
     setCurrentDoc(null);
     setShowDiscussion(false);
+    setShowMap(false);
+    setShowSnake(false);
+    setShowDisasterBook(false);
+    setShowRoom(false);
   };
 
   const handleGuestEnter = () => {
@@ -126,7 +130,10 @@ function App() {
     setIsVerifying(true);
     let customCodes;
     try {
-      customCodes = await fetchCustomCodes();
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 10000)
+      );
+      customCodes = await Promise.race([fetchCustomCodes(), timeout]);
     } catch {
       setErrorMsg('錯誤：無法連線驗證，請稍後再試。');
       setIsVerifying(false);
