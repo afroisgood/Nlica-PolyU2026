@@ -10,7 +10,7 @@ const GROUPS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vQXfw6pbDCrfneeWprwR2TdLYll7OXvDhE96zy1k-v1JWb7JNePJYsbS4nAa5WP0wVOZFEZFsJN60nR/pub?gid=912908446&single=true&output=csv';
 
 function parseCSV(text) {
-  const lines = text.trim().split('\n');
+  const lines = text.trim().split(/\r?\n/);
   const headers = lines[0].split(',').map((h) => h.trim());
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
