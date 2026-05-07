@@ -129,15 +129,18 @@ function App() {
     setErrorMsg('');
     setIsVerifying(true);
     let customCodes;
+    let timeoutId;
     try {
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 10000)
-      );
-      customCodes = await Promise.race([fetchCustomCodes(), timeout]);
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('timeout')), 10000);
+      });
+      customCodes = await Promise.race([fetchCustomCodes(), timeoutPromise]);
     } catch {
       setErrorMsg('錯誤：無法連線驗證，請稍後再試。');
       setIsVerifying(false);
       return;
+    } finally {
+      clearTimeout(timeoutId);
     }
     setIsVerifying(false);
 

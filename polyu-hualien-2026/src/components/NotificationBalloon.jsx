@@ -266,15 +266,16 @@ function NotificationBalloon({
 
   /* 隨機眨眼 */
   useEffect(() => {
-    let timer;
+    let outerTimer;
+    let innerTimer;
     const schedule = () => {
-      timer = setTimeout(() => {
+      outerTimer = setTimeout(() => {
         setBlink(true);
-        setTimeout(() => { setBlink(false); schedule(); }, 150);
+        innerTimer = setTimeout(() => { setBlink(false); schedule(); }, 150);
       }, 2500 + Math.random() * 2500);
     };
     schedule();
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(outerTimer); clearTimeout(innerTimer); };
   }, []);
 
   /* 登入時段問候（只觸發一次） */
@@ -370,9 +371,9 @@ function NotificationBalloon({
         </div>
       )}
 
-      {/* 助手自言自語（無通知時才顯示） */}
+      {/* 助手自言自語（無通知時才顯示，不攔截點擊事件） */}
       {speech && !showMenu && notifications.length === 0 && (
-        <div style={{ pointerEvents: 'auto' }}>
+        <div style={{ pointerEvents: 'none' }}>
           <SpeechBubble text={speech} onDone={() => setSpeech(null)} />
         </div>
       )}
