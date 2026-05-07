@@ -30,6 +30,7 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   const [text, setText]               = useState('');
   const [sending, setSending]         = useState(false);
   const [showEmoji, setShowEmoji]     = useState(false);
+  const [loadError, setLoadError]     = useState(false);
   const bottomRef = useRef(null);
   const textRef   = useRef(null);
 
@@ -58,6 +59,8 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     : null;
 
   useEffect(() => {
+    if (!selectedDay) return;
+    setLoadError(false);
     const msgRef = ref(db, `discussions/${selectedDay}`);
     const unsub = onValue(msgRef, snapshot => {
       const data = snapshot.val();
@@ -67,15 +70,16 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
           .map(([id, v]) => ({ id, ...v }))
           .sort((a, b) => (a.timestamp||0) - (b.timestamp||0))
       );
-    });
+    }, () => setLoadError(true));
     return () => unsub();
   }, [selectedDay]);
 
   useEffect(() => {
+    if (!selectedDay) return;
     const likesRef = ref(db, `discussionLikes/${selectedDay}`);
     const unsub = onValue(likesRef, snap => {
       setLikes(snap.val() || {});
-    });
+    }, () => {});
     return () => unsub();
   }, [selectedDay]);
 
@@ -84,11 +88,17 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   const handleSend = async () => {
     if (!text.trim() || sending) return;
     setSending(true);
-    await push(ref(db, `discussions/${selectedDay}`), {
-      name: playerData.name, group: playerData.group,
-      text: text.trim(), timestamp: serverTimestamp(),
-    });
-    setText(''); setSending(false); setShowEmoji(false);
+    try {
+      await push(ref(db, `discussions/${selectedDay}`), {
+        name: playerData.name, group: playerData.group,
+        text: text.trim(), timestamp: serverTimestamp(),
+      });
+      setText(''); setShowEmoji(false);
+    } catch {
+      // 送出失敗不清空文字，讓使用者可以重試
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleLike = async (msgId) => {
@@ -137,7 +147,12 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
       {/* 留言列表 */}
       <div style={{ flexGrow:1, overflowY:'auto', border:'2px inset #808080', backgroundColor:'white',
         padding:'8px 10px', display:'flex', flexDirection:'column', gap:8, minHeight:0 }}>
-        {messages.length === 0 && (
+        {loadError && (
+          <p style={{ color:'red', fontSize:'0.9rem', margin:'auto', textAlign:'center' }}>
+            &gt; 無法連線載入留言，請檢查網路後重試。
+          </p>
+        )}
+        {!loadError && messages.length === 0 && (
           <p style={{ color:'#888', fontSize:'0.9rem', margin:'auto', textAlign:'center' }}>
             &gt; 還沒有留言，成為第一個留言的人吧！
           </p>

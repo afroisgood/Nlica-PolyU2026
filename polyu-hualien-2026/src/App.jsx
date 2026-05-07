@@ -187,7 +187,10 @@ function App() {
     try {
       const [users, content] = await Promise.all([
         fetchUsers(),
-        fetch('/content.json').then((r) => r.json()),
+        fetch('/content.json').then((r) => {
+          if (!r.ok) throw new Error(`content.json 載入失敗（HTTP ${r.status}）`);
+          return r.json();
+        }),
       ]);
       const { folders, rootDocs } = parseContent(content);
       setUsersDatabase(users);
@@ -203,7 +206,10 @@ function App() {
     if (isBooting) return;
     Promise.all([
       fetchUsers(),
-      fetch('/content.json').then((r) => r.json()),
+      fetch('/content.json').then((r) => {
+        if (!r.ok) throw new Error(`content.json 載入失敗（HTTP ${r.status}）`);
+        return r.json();
+      }),
     ])
       .then(([users, content]) => {
         const { folders, rootDocs } = parseContent(content);
