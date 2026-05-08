@@ -45,7 +45,9 @@ function App() {
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
   const [isVerifying, setIsVerifying] = useState(false);
+  const [logoutCooldown, setLogoutCooldown] = useState(false);
   const verifyLockRef = useRef(false);
+  const logoutTimerRef = useRef(null);
   const notifIdRef = useRef(0);
 
   const addNotification = (notif) => {
@@ -112,6 +114,8 @@ function App() {
     // 確保下一次驗證不會被先前未釋放的鎖卡住
     verifyLockRef.current = false;
     setIsVerifying(false);
+    setLogoutCooldown(false);
+    clearTimeout(logoutTimerRef.current);
   };
 
   const handleGuestEnter = () => {
@@ -129,6 +133,10 @@ function App() {
     setPlayerData(data);
     setErrorMsg('');
     setStep(1);
+    // 登入後 10 秒內停用登出鍵，避免行動版誤觸或 ghost click 造成立即登出
+    setLogoutCooldown(true);
+    clearTimeout(logoutTimerRef.current);
+    logoutTimerRef.current = setTimeout(() => setLogoutCooldown(false), 10000);
   };
 
   const handleVerifyCode = async () => {
@@ -152,7 +160,7 @@ function App() {
       });
       customCodes = await Promise.race([fetchCustomCodes(), timeoutPromise]);
     } catch {
-      setErrorMsg('錯誤：無法連線驗證，請稍後再試。');
+      setErrorMsg('錯誤：無法連線驗證，請稍後再試。請關閉本網站並重新啟動。');
       setIsVerifying(false);
       verifyLockRef.current = false;
       return;
@@ -346,9 +354,10 @@ function App() {
                 <button
                   className="win95-button"
                   onClick={handleLogout}
-                  style={{ alignSelf: 'flex-start', flexShrink: 0 }}
+                  disabled={logoutCooldown}
+                  style={{ alignSelf: 'flex-start', flexShrink: 0, opacity: logoutCooldown ? 0.45 : 1 }}
                 >
-                  登出
+                  {logoutCooldown ? '請稍候…' : '登出'}
                 </button>
               </div>
 
