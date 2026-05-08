@@ -46,6 +46,7 @@ function App() {
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
   const [isVerifying, setIsVerifying] = useState(false);
   const [logoutCooldown, setLogoutCooldown] = useState(false);
+  const [customCodesCache, setCustomCodesCache] = useState(null);
   const verifyLockRef = useRef(false);
   const logoutTimerRef = useRef(null);
   const notifIdRef = useRef(0);
@@ -153,19 +154,25 @@ function App() {
       document.activeElement.blur();
     }
     let customCodes;
-    let timeoutId;
-    try {
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('timeout')), 6000);
-      });
-      customCodes = await Promise.race([fetchCustomCodes(), timeoutPromise]);
-    } catch {
-      setErrorMsg('錯誤：無法連線驗證，請稍後再試。請關閉本網站並重新啟動。');
-      setIsVerifying(false);
-      verifyLockRef.current = false;
-      return;
-    } finally {
-      clearTimeout(timeoutId);
+    if (customCodesCache !== null) {
+      // 快取命中：直接用開機時已抓好的資料，不需要發起任何網路請求
+      customCodes = customCodesCache;
+    } else {
+      // 快取未就緒（開機時 Firebase 也失敗）：fallback 到即時查詢
+      let timeoutId;
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('timeout')), 10000);
+        });
+        customCodes = await Promise.race([fetchCustomCodes(), timeoutPromise]);
+      } catch {
+        setErrorMsg('錯誤：無法連線驗證，請稍後再試。請關閉本網站並重新啟動。');
+        setIsVerifying(false);
+        verifyLockRef.current = false;
+        return;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     }
     setIsVerifying(false);
     verifyLockRef.current = false;
@@ -236,12 +243,16 @@ function App() {
         if (!r.ok) throw new Error(`content.json 載入失敗（HTTP ${r.status}）`);
         return r.json();
       }),
+      // 開機時預先抓取 customCodes 並快取；驗證時直接讀記憶體，不需臨場發起網路請求
+      // 失敗不影響主流程（catch null），驗證時會自動 fallback 到即時查詢
+      fetchCustomCodes().catch(() => null),
     ])
-      .then(([users, content]) => {
+      .then(([users, content, codes]) => {
         const { folders, rootDocs } = parseContent(content);
         setUsersDatabase(users);
         setContentFolders(folders);
         setRootDocs(rootDocs);
+        if (codes !== null) setCustomCodesCache(codes);
       })
       .catch((err) => setFetchError(err.message));
 
