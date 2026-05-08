@@ -171,6 +171,7 @@ function SpeechBubble({ text, onDone, flip = false }) {
       opacity: fading ? 0 : 1,
       transition: 'opacity 0.4s ease',
       position: 'relative',
+      pointerEvents: 'none',
     }}>
       {text}
       <div style={{ position: 'absolute', bottom: -8, ...(flip ? { left: 18, borderRight: '8px solid transparent' } : { right: 18, borderLeft: '8px solid transparent' }), width: 0, height: 0, borderTop: '8px solid #c8a000' }} />
