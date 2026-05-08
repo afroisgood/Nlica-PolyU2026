@@ -45,6 +45,7 @@ function App() {
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [customCodeModal, setCustomCodeModal] = useState(null); // { originalCode, data, customCodes }
   const [isVerifying, setIsVerifying] = useState(false);
+  const verifyLockRef = useRef(false);
   const notifIdRef = useRef(0);
 
   const addNotification = (notif) => {
@@ -90,6 +91,10 @@ function App() {
   })();
 
   const handleLogout = () => {
+    // 行動版：先讓任何輸入框失焦，避免虛擬鍵盤殘留遮住下一輪登入畫面
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setStep(0);
     setPlayerData(null);
     setAccessCode('');
@@ -102,6 +107,11 @@ function App() {
     setShowSnake(false);
     setShowDisasterBook(false);
     setShowRoom(false);
+    setCustomCodeModal(null);
+    setErrorMsg('');
+    // 確保下一次驗證不會被先前未釋放的鎖卡住
+    verifyLockRef.current = false;
+    setIsVerifying(false);
   };
 
   const handleGuestEnter = () => {
@@ -122,27 +132,35 @@ function App() {
   };
 
   const handleVerifyCode = async () => {
-    if (isVerifying) return;
+    // 使用 ref 鎖：state 更新是非同步，行動版快速雙擊時 state 來不及切換會導致重複呼叫
+    if (verifyLockRef.current) return;
     const code = accessCode.trim().toUpperCase();
     if (!code) { setErrorMsg('錯誤：請輸入憑證代碼。'); return; }
 
+    verifyLockRef.current = true;
     setErrorMsg('');
     setIsVerifying(true);
+    // 行動版：讓輸入框失焦，收起虛擬鍵盤，避免遮住「驗證中...」狀態
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     let customCodes;
     let timeoutId;
     try {
       const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('timeout')), 10000);
+        timeoutId = setTimeout(() => reject(new Error('timeout')), 6000);
       });
       customCodes = await Promise.race([fetchCustomCodes(), timeoutPromise]);
     } catch {
       setErrorMsg('錯誤：無法連線驗證，請稍後再試。');
       setIsVerifying(false);
+      verifyLockRef.current = false;
       return;
     } finally {
       clearTimeout(timeoutId);
     }
     setIsVerifying(false);
+    verifyLockRef.current = false;
 
     // 1. 直接比對原始代碼
     const directData = usersDatabase[code];

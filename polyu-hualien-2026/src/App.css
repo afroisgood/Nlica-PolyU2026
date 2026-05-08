@@ -140,6 +140,7 @@ body {
   cursor: pointer;
   margin-top: 15px;
   box-shadow: inset -1px -1px var(--win95-mid);
+  touch-action: manipulation; /* 消除行動版 300ms 點擊延遲與雙擊縮放 */
 }
 
 .win95-button:active {
