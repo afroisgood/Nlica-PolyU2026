@@ -395,6 +395,7 @@ function NotificationBalloon({
           width: 52, height: 52, cursor: 'pointer',
           animation, flexShrink: 0, pointerEvents: 'auto',
           filter: 'drop-shadow(1px 2px 0 rgba(0,0,0,0.4))',
+          touchAction: 'manipulation',
         }}
       >
         <AssistantChar mood={mood} blink={blink} />

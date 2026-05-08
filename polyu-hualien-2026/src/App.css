@@ -18,6 +18,13 @@ body {
   color: var(--win95-dark);
 }
 
+/* touch-action 不會繼承，需用 * 逐一套用。
+   manipulation = 允許捲動與縮放，但停用雙擊縮放與 300ms 點擊延遲。
+   這是 Chrome Android 快速點擊無反應、ghost click 的主因。 */
+*, *::before, *::after {
+  touch-action: manipulation;
+}
+
 .win95-container {
   display: flex;
   justify-content: center;
