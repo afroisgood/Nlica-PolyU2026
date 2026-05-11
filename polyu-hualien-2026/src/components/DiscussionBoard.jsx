@@ -92,8 +92,8 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
     if (!text.trim() || sending || cooldown > 0) return;
     const now = Date.now();
     const elapsed = now - lastSentRef.current;
-    if (elapsed < 3000) {
-      const remaining = Math.ceil((3000 - elapsed) / 1000);
+    if (elapsed < 5000) {
+      const remaining = Math.ceil((5000 - elapsed) / 1000);
       setCooldown(remaining);
       clearInterval(cooldownRef.current);
       cooldownRef.current = setInterval(() => {
