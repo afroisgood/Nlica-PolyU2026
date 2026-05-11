@@ -31,8 +31,11 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   const [sending, setSending]         = useState(false);
   const [showEmoji, setShowEmoji]     = useState(false);
   const [loadError, setLoadError]     = useState(false);
-  const bottomRef = useRef(null);
-  const textRef   = useRef(null);
+  const [cooldown, setCooldown]       = useState(0);
+  const bottomRef   = useRef(null);
+  const textRef     = useRef(null);
+  const lastSentRef = useRef(0);
+  const cooldownRef = useRef(null);
 
   // 從 Firebase 載入後台設定的討論日期，無資料時沿用靜態 DISCUSSION_DAYS
   useEffect(() => {
@@ -86,13 +89,28 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return;
+    if (!text.trim() || sending || cooldown > 0) return;
+    const now = Date.now();
+    const elapsed = now - lastSentRef.current;
+    if (elapsed < 3000) {
+      const remaining = Math.ceil((3000 - elapsed) / 1000);
+      setCooldown(remaining);
+      clearInterval(cooldownRef.current);
+      cooldownRef.current = setInterval(() => {
+        setCooldown(prev => {
+          if (prev <= 1) { clearInterval(cooldownRef.current); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+      return;
+    }
     setSending(true);
     try {
       await push(ref(db, `discussions/${selectedDay}`), {
         name: playerData.name, group: playerData.group,
         text: text.trim(), timestamp: serverTimestamp(),
       });
+      lastSentRef.current = Date.now();
       setText(''); setShowEmoji(false);
     } catch {
       // 送出失敗不清空文字，讓使用者可以重試
@@ -233,8 +251,8 @@ function DiscussionBoard({ playerData, isGuest, onBack }) {
               />
               <button className="win95-button"
                 style={{ alignSelf:'flex-end', padding:'6px 14px', touchAction:'manipulation' }}
-                onClick={handleSend} disabled={sending || !text.trim()}>
-                {sending ? '...' : '送出'}
+                onClick={handleSend} disabled={sending || !text.trim() || cooldown > 0}>
+                {sending ? '...' : cooldown > 0 ? `${cooldown}s` : '送出'}
               </button>
             </div>
           </div>
